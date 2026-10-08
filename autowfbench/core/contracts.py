@@ -24,6 +24,16 @@ def load_challenge(challenge_id):
     root = ROOT / "benchmark/challenges" / challenge_id
     package = {key: read_json(root / (key + ".json")) for key in ("definition", "environment", "scorecard")}
     package["environment"]["implementation_digest"] = digest((ROOT / "autowfbench/runtime/environment.py").read_text())
+    if package["environment"]["implementation"] == "checkout-realistic":
+        # Bind packaged assets and protected verifier code into the existing
+        # environment hash, without changing the public run-log schema.
+        paths = list((root / "assets").rglob("*"))
+        for directory in ("environments", "verifiers"):
+            paths.extend((ROOT / "autowfbench/runtime" / directory).glob("*.py"))
+        package["environment"]["asset_digests"] = {
+            str(path.relative_to(ROOT)): digest(path.read_text())
+            for path in sorted(paths) if path.is_file() and "__pycache__" not in path.parts
+        }
     validate("scorecard", package["scorecard"])
     definition = package["definition"]
     if definition["id"] != challenge_id:

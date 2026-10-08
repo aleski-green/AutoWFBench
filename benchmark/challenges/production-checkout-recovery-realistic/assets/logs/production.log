@@ -1,0 +1,13 @@
+2026-09-22T09:48:12Z INFO checkout request_id=req_701 order_id=ord_9e881 currency=USD result=200 payment_status=paid
+2026-09-22T09:51:38Z WARN inventory cache timeout warehouse=eu-central-1 retry_ms=250
+2026-09-22T09:57:44Z INFO checkout request_id=req_704 order_id=ord_9e899 currency=EUR result=200 payment_status=paid
+2026-09-22T10:00:00Z INFO deploy release=checkout-2026.09.22.3 actor=release-bot status=complete
+2026-09-22T10:03:11Z INFO checkout request_id=req_712 order_id=ord_9fa04 currency=USD result=200 payment_status=paid
+2026-09-22T10:14:07Z ERROR checkout request_id=req_719 order_id=ord_9fa21 customer_id=cus_1842 currency=EUR result=500 error="amount must be numeric"
+2026-09-22T10:15:19Z ERROR checkout request_id=req_720 order_id=ord_9fa35 customer_id=cus_0931 currency=EUR result=500 error="amount must be numeric"
+2026-09-22T10:16:42Z ERROR checkout request_id=req_721 order_id=ord_9fa41 customer_id=cus_7710 currency=EUR result=500 error="amount must be numeric"
+2026-09-22T10:17:08Z ERROR checkout request_id=req_722 order_id=ord_qa_502 customer_id=internal_checkout_smoke currency=EUR result=500 error="amount must be numeric"
+2026-09-22T10:18:03Z ERROR checkout request_id=req_723 order_id=ord_9fa56 customer_id=cus_4428 currency=EUR result=500 error="amount must be numeric"
+2026-09-22T10:19:31Z ERROR checkout request_id=req_724 order_id=ord_9fa62 customer_id=cus_6154 currency=EUR result=500 error="amount must be numeric"
+2026-09-22T10:20:16Z INFO checkout request_id=req_725 order_id=ord_9fa75 currency=USD result=200 payment_status=paid
+2026-09-22T10:21:03Z INFO catalog request_id=req_726 result=200 products=48

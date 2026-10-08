@@ -1,0 +1,7 @@
+[
+  {"order_id": "ord_9fa21", "customer_id": "cus_1842", "timestamp": "2026-09-22T10:14:07Z", "amount": "48.50", "currency": "EUR"},
+  {"order_id": "ord_9fa35", "customer_id": "cus_0931", "timestamp": "2026-09-22T10:15:19Z", "amount": "129.99", "currency": "EUR"},
+  {"order_id": "ord_9fa41", "customer_id": "cus_7710", "timestamp": "2026-09-22T10:16:42Z", "amount": "17.25", "currency": "EUR"},
+  {"order_id": "ord_9fa56", "customer_id": "cus_4428", "timestamp": "2026-09-22T10:18:03Z", "amount": "63.00", "currency": "EUR"},
+  {"order_id": "ord_9fa62", "customer_id": "cus_6154", "timestamp": "2026-09-22T10:19:31Z", "amount": "205.40", "currency": "EUR"}
+]

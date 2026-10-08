@@ -219,7 +219,22 @@ def handler_for(env, run_token, admin_token):
 
 
 def serve(challenge_id, seed, host="127.0.0.1"):
-    env = ChallengeEnvironment(load_challenge(challenge_id), seed)
+    import signal
+    package = load_challenge(challenge_id)
+    if package["environment"]["implementation"] == "checkout-realistic":
+        from autowfbench.runtime.environments.base import ManagedEnvironment
+        from autowfbench.runtime.environments.checkout import CheckoutAdapter
+        env = ManagedEnvironment(package, CheckoutAdapter(package, seed))
+    else:
+        env = ChallengeEnvironment(package, seed)
     server = ThreadingHTTPServer((host, 0), handler_for(env, os.environ["AWB_RUN_TOKEN"], os.environ["AWB_ENV_ADMIN_TOKEN"]))
-    print(json.dumps({"port": server.server_port}), flush=True)
-    server.serve_forever()
+    def terminate(_signum, _frame):
+        raise SystemExit(0)
+    signal.signal(signal.SIGTERM, terminate)
+    try:
+        print(json.dumps({"port": server.server_port}), flush=True)
+        server.serve_forever()
+    finally:
+        server.server_close()
+        if hasattr(env, "close"):
+            env.close()
