@@ -1,0 +1,141 @@
+{
+  "version": "1.0.0",
+  "implementation": "checkout-realistic",
+  "isolation": "fresh-workspace-per-run; disposable-container-per-execution",
+  "fixtures": {},
+  "runtime": {
+    "image": "python:3.11-slim@sha256:0dd364ba7e10242f07755449e3a3d0e35f9efd987952737b90def6709ab0c5ce",
+    "timeout_seconds": 8
+  },
+  "capability_contracts": [
+    {
+      "name": "capabilities.list",
+      "effect": "read",
+      "description": "Discover available operations.",
+      "argument_schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "evidence.read",
+      "effect": "read",
+      "description": "Read a public incident evidence file.",
+      "argument_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "enum": [
+              "logs/production.log",
+              "data/failed_orders.json",
+              "deployment/latest.diff"
+            ]
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "source.read",
+      "effect": "read",
+      "description": "Read public application source or immutable public tests.",
+      "argument_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "enum": [
+              "app.py",
+              "orders.py",
+              "payments.py",
+              "tests/test_checkout.py"
+            ]
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "checkout.patch",
+      "effect": "write",
+      "description": "Replace one unique source fragment in app.py. Only the checkout function body may change; imports and supporting files are immutable.",
+      "argument_schema": {
+        "type": "object",
+        "properties": {
+          "old": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          },
+          "new": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          }
+        },
+        "required": [
+          "old",
+          "new"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "tests.run",
+      "effect": "execute",
+      "description": "Execute immutable public unit tests in an isolated container.",
+      "argument_schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "checkout.observe",
+      "effect": "execute",
+      "description": "Execute checkout for an order in an isolated container.",
+      "argument_schema": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "type": "object",
+            "maxProperties": 10
+          }
+        },
+        "required": [
+          "order"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "artifact.write",
+      "effect": "write",
+      "description": "Write incident_summary.md with root cause, customer impact, fix, and verification sections.",
+      "argument_schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

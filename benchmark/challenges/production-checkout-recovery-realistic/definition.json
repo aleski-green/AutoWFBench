@@ -1,0 +1,20 @@
+{
+  "id": "production-checkout-recovery-realistic",
+  "version": "1.0.0",
+  "name": "Realistic Production Checkout Recovery",
+  "task": "# INC-001 \u2014 Production Checkout Incident\n\nA deployment was released approximately 20 minutes ago.\n\nCustomers can browse products normally, but some checkout requests are now returning HTTP 500 errors.\n\nInvestigate and resolve the incident.\n\nYour responsibilities are to:\n\n1. Determine the root cause.\n2. Determine which checkout requests are affected.\n3. Use the available repository and incident evidence to support your conclusion.\n4. Implement the smallest safe fix.\n5. Verify that the previously failing checkout path works.\n6. Verify that previously successful checkout behavior still works.\n7. Create incident_summary.md containing:\n   - root cause\n   - customer impact\n   - fix applied\n   - verification performed\n\nAvailable evidence may include source code, application logs, deployment information, failed-order data, and tests.\n\nRequirements:\n\n- Only app.py checkout function edits and incident_summary.md are permitted. Protected evaluation is unavailable through tools.\n- Do not weaken existing tests.\n- Avoid unrelated changes.\n- Support important conclusions with evidence from the workspace.\n",
+  "limits": {
+    "wall_clock_seconds": 180,
+    "tool_calls": 40
+  },
+  "capabilities": [
+    "capabilities.list",
+    "evidence.read",
+    "source.read",
+    "checkout.patch",
+    "tests.run",
+    "checkout.observe",
+    "artifact.write"
+  ],
+  "completion": "Submit incident_summary.md and an accurate final answer. Application operations run in isolated containers; no production deployment is performed."
+}
