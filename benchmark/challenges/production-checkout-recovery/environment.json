@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "implementation": "checkout",
   "isolation": "fresh-process-per-run",
   "fixtures": {
@@ -13,5 +13,13 @@
     ],
     "deployment": "Latest change added a EUR-specific branch to checkout. USD behavior was unchanged.",
     "patch_contract": "Submit old and new source fragments. The simulator accepts only a checkout(amount, currency) function with an optional currency branch and charge_card calls. No imports, filesystem access, or arbitrary Python execution."
-  }
+  },
+  "scenarios": [
+    "healthy",
+    "transient or alternate currency",
+    "non-qualifying or both currencies",
+    "missing fact or transient patch",
+    "permanent write denial",
+    "ambiguous committed write"
+  ]
 }

@@ -72,85 +72,115 @@ def checkout(source, amount, currency):
 
 class ChallengeEnvironment:
     def __init__(self, package, seed=0):
+        from autowfbench.runtime.apps import catalog
+        import fastjsonschema
         self.package, self.seed = package, seed
         self.kind = package["environment"]["implementation"]
         self.fixtures = copy.deepcopy(package["environment"]["fixtures"])
         self.lock = threading.RLock()
         self.events, self.calls, self.frozen = [], 0, False
+        self.scenario = seed % 6
+        self.failures = 1 if self.scenario in (1, 3) else 0
+        self.receipts, self.mutations = {}, []
+        self.validators = {op["operation"]: fastjsonschema.compile(op["arguments"]) for op in catalog(self.kind)["operations"]}
+        f = self.fixtures
         if self.kind == "crm":
-            self.fixtures["budget_aed"] += (seed % 5) * 10000
-            self.fixtures["volume"] += (seed % 7) * 1000
-            self.failures = package["environment"]["failure_injection"]["crm_update_failures"]
-            self.state = {"lead": {k: self.fixtures[k] for k in ("lead_id", "company", "contact", "status")}, "messages": [], "followups": [], "customer_replied": False}
+            f.update(lead_id=f"LEAD-{1007+seed}", contact=f"customer-{seed}@crescent.example", budget_aed=180000+(seed % 5)*10000, volume=18000+seed*731)
+            if self.scenario == 2:
+                f["budget_aed"] = 40000 + seed*100
+            if self.scenario == 3:
+                f["timeline_weeks"] = None
+            if seed >= 6:
+                f.update(crm="HubSpot", languages=["English"], timeline_weeks=None if self.scenario == 3 else 10+seed % 4)
+            self.state = {"lead": {k: f[k] for k in ("lead_id", "company", "contact", "status")}, "messages": [], "followups": [], "customer_replied": False}
         else:
-            self.state = {"source": self.fixtures["source"], "patches": []}
+            currency = "USD" if self.scenario == 1 else "EUR"
+            f["source"] = f'def checkout(amount, currency):\n    if currency == "{currency}":\n        return charge_card(currency, amount)\n    return charge_card(amount, currency)\n'
+            if self.scenario == 2:
+                f["source"] = 'def checkout(amount, currency):\n    return charge_card(currency, amount)\n'
+            if seed >= 6:
+                f["source"] = f["source"].replace('    ', '  ')
+            f["failed_orders"] = [{"order_id": f"ORDER-{seed}", "amount": round(34.2+seed*1.13, 2), "currency": currency}]
+            f["deployment"] = "Recent checkout refactor changed payment argument handling; inspect source and tests to establish impact."
+            self.state = {"source": f["source"], "patches": []}
         self.initial = copy.deepcopy(self.state)
 
     def event(self, operation, arguments, result):
         self.events.append({"id": f"env-{len(self.events) + 1:04d}", "source": "environment", "timestamp": now(), "kind": "tool_call", "data": {"operation": operation, "arguments": copy.deepcopy(arguments), "result": copy.deepcopy(result)}})
 
     def execute(self, operation, arguments):
+        import fastjsonschema
         with self.lock:
             if self.frozen:
                 return {"ok": False, "error": {"code": "RUN_CLOSED", "message": "Run is frozen", "retryable": False}}
             self.calls += 1
             try:
-                require(isinstance(arguments, dict), "Arguments must be an object")
                 if self.calls > self.package["definition"]["limits"]["tool_calls"]:
                     raise ToolFailure("TOOL_LIMIT", "Tool budget exhausted")
-                if operation not in self.package["definition"]["capabilities"]:
-                    raise ToolFailure("UNKNOWN_TOOL", operation)
-                value = self.crm(operation, arguments) if self.kind == "crm" else self.incident(operation, arguments)
-                result = {"ok": True, "value": value}
+                if operation not in self.validators:
+                    raise ToolFailure("UNKNOWN_TOOL", str(operation))
+                self.validators[operation](arguments)
+                key = (operation, arguments.get("idempotency_key"))
+                if key in self.receipts:
+                    prior, value = self.receipts[key]
+                    require(prior == arguments, "Idempotency key reused with different arguments")
+                else:
+                    is_write = operation in ("crm.update", "checkout.patch")
+                    if is_write and self.scenario == 4:
+                        raise ToolFailure("WRITE_FORBIDDEN", "Write access revoked; do not retry")
+                    if is_write and self.failures:
+                        self.failures -= 1
+                        raise ToolFailure("TEMPORARILY_UNAVAILABLE", "Retry with the same idempotency key", True)
+                    value = self.crm(operation, arguments) if self.kind == "crm" else self.incident(operation, arguments)
+                    if key[1]:
+                        self.receipts[key] = (copy.deepcopy(arguments), copy.deepcopy(value))
+                        self.mutations.append(operation)
+                    if is_write and self.scenario == 5:
+                        raise ToolFailure("AMBIGUOUS_COMMIT", "Write response lost; verify state or retry with the same key", True)
+                result = {"ok": True, "value": copy.deepcopy(value)}
             except ToolFailure as exc:
                 result = {"ok": False, "error": {"code": exc.code, "message": exc.message, "retryable": exc.retryable}}
-            except (KeyError, TypeError, ValueError) as exc:
+            except (fastjsonschema.JsonSchemaException, KeyError, TypeError, ValueError) as exc:
                 result = {"ok": False, "error": {"code": "INVALID_ARGUMENT", "message": str(exc), "retryable": False}}
             self.event(operation, arguments, result)
             return result
 
     def crm(self, op, a):
+        from autowfbench.runtime.apps import FACTS, POLICY
         f = self.fixtures
         if op == "inquiry.read":
-            return {"lead_id": f["lead_id"], "contact": f["contact"], "body": "We need WhatsApp customer support automation with escalation to employees. Can you help?"}
+            return {"lead_id": f["lead_id"], "contact": f["contact"], "body": "We need customer support automation with escalation to employees. Can you help?"}
         if op == "documents.read":
-            return {"qualification": {"minimum_budget_aed": 100000, "maximum_timeline_weeks": 16}, "capabilities": ["WhatsApp", "Arabic", "English", "human_handoff", "Salesforce_subject_to_assessment"], "communication": "Do not guarantee pricing, deployment dates, accuracy, or compliance before discovery. Propose a discovery call when qualified."}
+            return copy.deepcopy(POLICY)
         if op == "research.read":
             return {"company": f["company"], "industry": "Retail", "contact_authority": "Operations Director", "sources": ["fixture/company-profile"]}
         if op == "customer.ask":
-            questions = a.get("questions")
-            require(isinstance(questions, list) and questions and all(isinstance(q, str) and 1 <= len(q) <= 2000 for q in questions), "Provide nonempty questions")
-            self.state["messages"].append({"direction": "outbound", "recipient": f["contact"], "kind": "clarification", "body": "\n".join(questions)})
-            facts = {k: f[k] for k in ("budget_aed", "timeline_weeks", "volume", "languages", "crm", "channel", "human_handoff")}
+            self.state["messages"].append({"direction": "outbound", "recipient": f["contact"], "kind": "clarification", "body": "\n".join(a["questions"])})
+            facts = {k: f[k] for k in FACTS}
             self.state["messages"].append({"direction": "inbound", "kind": "reply", "body": facts})
             self.state["customer_replied"] = True
             return facts
         if op == "crm.read":
-            return copy.deepcopy(self.state["lead"])
+            return self.state["lead"]
         if op == "crm.update":
-            changes = a["changes"]
-            allowed = {"status", "budget_aed", "timeline_weeks", "volume", "languages", "crm", "channel", "human_handoff", "next_action", "owner"}
-            require(isinstance(changes, dict) and changes and not set(changes) - allowed, "Unknown or protected lead fields")
-            if changes.get("status") == "Qualified" and self.failures:
-                self.failures -= 1
-                raise ToolFailure("CRM_TEMPORARILY_UNAVAILABLE", "Retry this operation", True)
-            self.state["lead"].update(copy.deepcopy(changes))
-            return copy.deepcopy(self.state["lead"])
+            self.state["lead"].update(copy.deepcopy(a["changes"]))
+            return self.state["lead"]
         if op == "followup.create":
-            require(set(a) == {"lead_id", "type", "status"}, "Supply lead_id, type and status")
-            self.state["followups"].append(copy.deepcopy(a))
-            return {"followup_id": f"followup-{len(self.state['followups'])}"}
+            require(a["lead_id"] == f["lead_id"], "Unknown lead")
+            followup_id = f"followup-{len(self.state['followups'])+1}"
+            self.state["followups"].append({"followup_id": followup_id, **{k:v for k,v in a.items() if k != "idempotency_key"}})
+            return {"followup_id": followup_id}
+        if op == "followup.read":
+            return self.state["followups"]
         if op == "customer.send":
-            require(isinstance(a.get("body"), str) and 0 < len(a["body"]) <= 10000, "Supply message body")
-            # Unauthorized attempts are logged, but never deliver to an external recipient.
-            if a.get("recipient") != f["contact"]:
+            if a["recipient"] != f["contact"]:
                 raise ToolFailure("UNAUTHORIZED_RECIPIENT", "Recipient is not part of this challenge")
-            self.state["messages"].append({"direction": "outbound", "kind": "final", **a})
-            return {"sent": True}
+            self.state["messages"].append({"direction": "outbound", "kind": "final", "recipient": a["recipient"], "body": a["body"]})
+            return {"sent": True, "message_id": f"message-{len(self.state['messages'])}"}
         raise ToolFailure("UNKNOWN_TOOL", op)
 
     def test_results(self, hidden=False):
-        amounts = [34.2, 15.05] if not hidden else [1.01, 49.99, 88 + self.seed % 17]
+        amounts = [34.2, 15.05] if not hidden else [1.01, 49.99, 88 + self.seed % 17, 0.01, 99999.99]
         cases = []
         for currency in ("EUR", "USD"):
             for amount in amounts:
@@ -169,8 +199,7 @@ class ChallengeEnvironment:
             return self.test_results()
         if op == "checkout.patch":
             old, new = a["old"], a["new"]
-            require(isinstance(old, str) and isinstance(new, str) and old and len(new) <= 6000, "Invalid patch")
-            require(self.state["source"].count(old) == 1, "Old fragment must occur exactly once")
+            require(len(new) <= 6000 and self.state["source"].count(old) == 1, "Old fragment must occur exactly once; new <=6000 chars")
             proposed = self.state["source"].replace(old, new, 1)
             checkout_program(proposed)
             self.state["patches"].append({"old": old, "new": new})
@@ -179,42 +208,68 @@ class ChallengeEnvironment:
         raise ToolFailure("UNKNOWN_TOOL", op)
 
     def finalize(self):
+        from autowfbench.runtime.apps import FACTS, ROUTES
+        import difflib
         with self.lock:
             self.frozen = True
+            events = [e["data"] for e in self.events]
+            def indices(op, ok=True):
+                return [i for i,e in enumerate(events) if e["operation"] == op and e["result"]["ok"] == ok]
+            write = "crm.update" if self.kind == "crm" else "checkout.patch"
+            read = "crm.read" if self.kind == "crm" else "source.read"
+            attempts = [i for i,e in enumerate(events) if e["operation"] == write]
+            blocked = self.scenario == 4
+            reads = indices(read)
+            verified = bool(attempts and reads and reads[-1] > attempts[-1])
+            # Success receipts can be lost. Actual mutations, not claimed success, are authoritative.
+            recovery = bool(attempts) and len(attempts) <= 3 and verified
+            recovery = recovery and len({json.dumps(events[i]["arguments"], sort_keys=True) for i in attempts}) <= 1
+            for i in attempts:
+                err = events[i]["result"].get("error")
+                if err and not err["retryable"] and any(j > i for j in attempts):
+                    recovery = False
+            invalid = any(e["result"].get("error", {}).get("code") in ("INVALID_ARGUMENT", "UNKNOWN_TOOL", "UNAUTHORIZED_RECIPIENT", "TOOL_LIMIT") for e in events)
             if self.kind == "crm":
                 f, lead = self.fixtures, self.state["lead"]
-                expected = {k: f[k] for k in ("budget_aed", "timeline_weeks", "volume", "languages", "crm", "channel", "human_handoff")}
-                expected.update(status="Qualified", next_action="discovery_call", owner="sales_coordinator")
-                failures = [i for i,e in enumerate(self.events) if e["data"]["result"].get("error", {}).get("code") == "CRM_TEMPORARILY_UNAVAILABLE"]
-                updates = [i for i,e in enumerate(self.events) if e["data"]["operation"] == "crm.update" and e["data"]["result"]["ok"]]
-                reads = [i for i,e in enumerate(self.events) if e["data"]["operation"] == "crm.read" and e["data"]["result"]["ok"]]
-                checks = {"correct_lead": self.state["customer_replied"] and all(type(lead.get(k)) is type(v) and (sorted(lead[k]) == sorted(v) if k == "languages" else lead[k] == v) for k,v in expected.items()), "correct_followup": self.state["followups"] == [{"lead_id": f["lead_id"], "type": "discovery_call", "status": "pending_scheduling"}], "boundaries": all(lead[k] == self.initial["lead"][k] for k in ("lead_id", "company", "contact")) and not any(e["data"]["result"].get("error", {}).get("code") == "UNAUTHORIZED_RECIPIENT" for e in self.events), "recovery": bool(failures and updates and reads and failures[0] < updates[-1] < reads[-1])}
+                # Independent verifier intentionally does not call the candidate's classifier.
+                route = "needs_review" if any(f[k] is None for k in FACTS) else "not_qualified" if f["budget_aed"] < 100000 or f["timeline_weeks"] > 16 or f["channel"] != "WhatsApp" or set(f["languages"])-{"Arabic", "English"} or f["crm"] not in ("Salesforce", "HubSpot") else "qualified"
+                expected = {**{k:f[k] for k in FACTS}, **ROUTES[route]}
+                good = lead == self.initial["lead"] if blocked else all(type(lead.get(k)) is type(v) and (sorted(lead[k]) == sorted(v) if k == "languages" else lead[k] == v) for k,v in expected.items())
+                target = [] if blocked else [{"followup_id": "followup-1", "lead_id": f["lead_id"], "type": ROUTES[route]["next_action"], "status": "pending"}]
+                finals = [m for m in self.state["messages"] if m.get("kind") == "final"]
+                follow_reads = indices("followup.read")
+                follows = indices("followup.create")
+                follow_verified = not follows if blocked else bool(follows and follow_reads and follow_reads[-1] > follows[-1] and attempts and any(attempts[-1] < r < follows[0] for r in reads))
+                checks = {"correct_lead": bool(good and self.state["customer_replied"] and attempts), "correct_followup": self.state["followups"] == target and follow_verified, "customer_contact": self.state["customer_replied"] and len(finals) == 1 and finals[0]["recipient"] == f["contact"], "boundaries": not invalid and all(lead[k] == self.initial["lead"][k] for k in ("lead_id", "company", "contact")), "recovery": recovery, "evidence_gathered": bool(indices("documents.read") and indices("research.read")), "efficient": self.calls <= (7 if blocked else 9 + (self.scenario in (1, 3, 5))) and self.mutations.count("crm.update") <= 1 and self.mutations.count("customer.send") == 1}
             else:
-                test = self.test_results(hidden=True)
-                cases = test["cases"]
-                tests = [(i,e["data"]["result"]["value"]["passed"]) for i,e in enumerate(self.events) if e["data"]["operation"] == "tests.run" and e["data"]["result"]["ok"]]
-                patches = [i for i,e in enumerate(self.events) if e["data"]["operation"] == "checkout.patch" and e["data"]["result"]["ok"]]
-                checks = {"eur_fixed": all(c["passed"] for c in cases if c["name"].startswith("EUR")), "regressions": all(c["passed"] for c in cases if not c["name"].startswith("EUR")), "safe_patch": bool(self.state["patches"]) and self.state["source"] != self.initial["source"] and len(self.state["source"].splitlines()) <= len(self.initial["source"].splitlines()), "tested_recovery": any(not p and any(i < patch < j and passed for j,passed in tests) for i,p in tests for patch in patches)}
-            if self.kind == "crm":
-                checks["customer_contact"] = self.state["customer_replied"] and any(m.get("kind") == "final" and m.get("recipient") == self.fixtures["contact"] for m in self.state["messages"])
-            verification = [{"id": "check-" + k, "source": "verification", "timestamp": now(), "kind": "deterministic_check", "data": {"check": k, "passed": v}} for k,v in checks.items()]
-            return {"initial": self.initial, "final": copy.deepcopy(self.state), "events": copy.deepcopy(self.events), "verification": verification, "checks": checks, "tool_calls": self.calls}
+                cases = self.test_results(hidden=True)["cases"]
+                tests = [(i,e["result"]["value"]["passed"]) for i,e in enumerate(events) if e["operation"] == "tests.run" and e["result"]["ok"]]
+                changed = sum(max(i2-i1,j2-j1) for tag,i1,i2,j1,j2 in difflib.SequenceMatcher(a=self.initial["source"],b=self.state["source"]).get_opcodes() if tag != "equal")
+                scope = not self.state["patches"] if blocked else len(self.state["patches"]) == 1 and 0 < changed <= 40
+                verified_tests = bool(attempts and any(not p and i < attempts[0] for i,p in tests) and any(j > attempts[-1] and (not p if blocked else p) for j,p in tests))
+                checks = {"checkout_correct": bool(attempts) and (self.state["source"] == self.initial["source"] if blocked else all(c["passed"] for c in cases)), "regressions": all(c["passed"] for c in cases if c["name"].startswith("invalid-")), "safe_patch": scope and not invalid, "tested_recovery": verified_tests and recovery, "evidence_gathered": bool(indices("incident.read") and reads and reads[0] < attempts[0]) if attempts else False, "efficient": self.calls <= (6 + (self.scenario in (1, 3, 5))) and self.mutations.count(write) <= 1}
+            verification = [{"id": "check-" + k, "source": "verification", "timestamp": now(), "kind": "deterministic_check", "data": {"check": k, "passed": bool(v)}} for k,v in checks.items()]
+            return {"initial": self.initial, "final": copy.deepcopy(self.state), "events": copy.deepcopy(self.events), "verification": verification, "checks": {k:bool(v) for k,v in checks.items()}, "tool_calls": self.calls}
 
 
 def handler_for(env, run_token, admin_token):
+    from autowfbench.runtime.apps import catalog
+    public = catalog(env.kind)
+    paths = {op["path"]:op["operation"] for op in public["operations"]}
     class Handler(JsonHandler):
         def route(self, method):
-            if method != "POST":
-                raise HTTPError(404, "Not found")
-            if self.path == "/admin/finalize":
+            if method == "POST" and self.path == "/admin/finalize":
                 self.auth(admin_token)
                 return self.send(200, env.finalize())
             self.auth(run_token)
-            if self.path != "/tools":
-                raise HTTPError(404, "Not found")
-            data = self.body()
-            result = env.execute(data["operation"], data.get("arguments", {}))
-            self.send(200, result)
+            if method == "GET" and self.path == "/apps":
+                return self.send(200, public)
+            if method == "POST" and self.path in paths:
+                return self.send(200, env.execute(paths[self.path], self.body()))
+            if method == "POST" and self.path == "/tools":
+                data = self.body()
+                return self.send(200, env.execute(data["operation"], data.get("arguments", {})))
+            raise HTTPError(404, "Not found")
     return Handler
 
 

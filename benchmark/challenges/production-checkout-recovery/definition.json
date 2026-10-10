@@ -1,11 +1,11 @@
 {
   "id": "production-checkout-recovery",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "name": "Production Checkout Recovery",
   "task": "Investigate a production checkout incident affecting some transactions. Use available source, deployment and failure evidence to identify the root cause and impact. Apply the smallest appropriate correction, verify affected and previously working behavior, and write an incident summary including root cause, impact, fix, and verification. Do not disable payment validation.",
   "limits": {
     "wall_clock_seconds": 120,
-    "tool_calls": 30
+    "tool_calls": 16
   },
   "capabilities": [
     "incident.read",
@@ -13,5 +13,5 @@
     "checkout.patch",
     "tests.run"
   ],
-  "completion": "Submit incident-summary.md and an accurate final answer. This fixture is a constrained checkout simulator, not an unrestricted Python execution environment."
+  "completion": "Submit incident-summary.md and an accurate final answer. This fixture is a constrained checkout simulator, not an unrestricted Python execution environment. Handle missing facts and non-qualifying leads where applicable. For permanent write errors, preserve state and explain the block. Reuse idempotency keys after ambiguous writes; bound retries. Read back writes before claiming success. Optimize calls without skipping evidence."
 }

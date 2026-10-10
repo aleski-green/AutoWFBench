@@ -55,7 +55,7 @@ class BenchmarkTests(unittest.TestCase):
             with self.subTest(challenge=challenge):
                 engine, run_id, result = self.run_reference(challenge)
                 self.assertEqual(result["status"], "complete")
-                self.assertEqual(result["score_0_10"], 7.32)  # 6 + 4 * .33, no fake real judge
+                self.assertEqual(result["score_0_10"], 8.66)  # 8 + 2 * .33, explicitly simulated judge
                 self.assertTrue(result["execution_pass"])
                 self.assertEqual(result["judge"]["mode"], "demo")
                 log = read_json(engine.directory(run_id) / "run-log.json")
@@ -69,12 +69,12 @@ class BenchmarkTests(unittest.TestCase):
             with self.subTest(challenge=challenge):
                 _, _, result = self.run_reference(challenge, "incomplete")
                 self.assertFalse(result["execution_pass"])
-                self.assertLess(result["score_0_10"], 7.32)
+                self.assertLess(result["score_0_10"], 8.66)
 
     def test_absent_judge_keeps_total_null(self):
         _, _, result = self.run_reference(judge=False)
         self.assertEqual(result["status"], "awaiting_llm_judge")
-        self.assertEqual(result["deterministic_points"], 6)
+        self.assertEqual(result["deterministic_points"], 8)
         self.assertIsNone(result["score_0_10"])
 
     def test_failed_judge_never_substitutes_a_score(self):

@@ -23,7 +23,7 @@ def load_challenge(challenge_id):
         raise ValueError("Unknown challenge")
     root = ROOT / "benchmark/challenges" / challenge_id
     package = {key: read_json(root / (key + ".json")) for key in ("definition", "environment", "scorecard")}
-    package["environment"]["implementation_digest"] = digest((ROOT / "autowfbench/runtime/environment.py").read_text())
+    package["environment"]["implementation_digest"] = digest({name: (ROOT / "autowfbench/runtime" / name).read_text() for name in ("environment.py", "apps.py")})
     validate("scorecard", package["scorecard"])
     definition = package["definition"]
     if definition["id"] != challenge_id:
@@ -33,6 +33,8 @@ def load_challenge(challenge_id):
     ids = [c["id"] for c in package["scorecard"]["criteria"]]
     if len(ids) != len(set(ids)):
         raise ValueError("Duplicate criterion IDs")
+    if not set(package["scorecard"].get("gates", {})) <= set(ids):
+        raise ValueError("Score gate references an unknown criterion")
     package["hashes"] = {k: digest(v) for k, v in package.items()}
     return package
 

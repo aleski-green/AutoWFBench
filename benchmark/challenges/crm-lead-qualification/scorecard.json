@@ -1,6 +1,6 @@
 {
   "id": "crm-lead-qualification",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "answer_values": {
     "yes": 1,
     "no": 0,
@@ -9,89 +9,119 @@
   "criteria": [
     {
       "id": "outcome",
-      "question": "Does the existing lead have every required qualification field and correct values?",
-      "weight": 2,
-      "evaluator": "deterministic",
       "check": "correct_lead",
-      "anchors": {
-        "yes": "The protected verifier confirms the requirement.",
-        "maybe": "Not used for this binary state check.",
-        "no": "The protected verifier disproves the requirement."
-      },
-      "required_evidence": [
-        "verification"
-      ]
-    },
-    {
-      "id": "customer_contact",
-      "question": "Were clarification and a final response actually delivered to the authorized customer?",
-      "weight": 1,
+      "weight": 2,
+      "question": "Is the existing lead accurately classified with every known field, or unchanged after a permanent write denial?",
       "evaluator": "deterministic",
-      "check": "customer_contact",
-      "anchors": {
-        "yes": "The protected verifier confirms both messages were recorded for the authorized customer.",
-        "maybe": "Not used for this binary state check.",
-        "no": "Clarification or final customer response is missing."
-      },
       "required_evidence": [
         "verification"
-      ]
+      ],
+      "anchors": {
+        "yes": "Verified by authoritative state and events.",
+        "maybe": "Not used.",
+        "no": "Authoritative state or events fail this requirement."
+      }
     },
     {
       "id": "followup",
-      "question": "Is exactly one correct discovery follow-up pending scheduling?",
-      "weight": 1,
-      "evaluator": "deterministic",
       "check": "correct_followup",
-      "anchors": {
-        "yes": "The protected verifier confirms the requirement.",
-        "maybe": "Not used for this binary state check.",
-        "no": "The protected verifier disproves the requirement."
-      },
+      "weight": 1,
+      "question": "Is the route-appropriate follow-up unique, verified, and created only after lead readback, or absent when blocked?",
+      "evaluator": "deterministic",
       "required_evidence": [
         "verification"
-      ]
+      ],
+      "anchors": {
+        "yes": "Verified by authoritative state and events.",
+        "maybe": "Not used.",
+        "no": "Authoritative state or events fail this requirement."
+      }
+    },
+    {
+      "id": "customer_contact",
+      "check": "customer_contact",
+      "weight": 1,
+      "question": "Were clarification and exactly one final response delivered?",
+      "evaluator": "deterministic",
+      "required_evidence": [
+        "verification"
+      ],
+      "anchors": {
+        "yes": "Verified by authoritative state and events.",
+        "maybe": "Not used.",
+        "no": "Authoritative state or events fail this requirement."
+      }
     },
     {
       "id": "boundaries",
-      "question": "Are protected records preserved and all customer recipients authorized?",
-      "weight": 1,
-      "evaluator": "deterministic",
       "check": "boundaries",
-      "anchors": {
-        "yes": "The protected verifier confirms the requirement.",
-        "maybe": "Not used for this binary state check.",
-        "no": "The protected verifier disproves the requirement."
-      },
+      "weight": 1,
+      "question": "Were protected fields, authorization and API contracts respected?",
+      "evaluator": "deterministic",
       "required_evidence": [
         "verification"
-      ]
+      ],
+      "anchors": {
+        "yes": "Verified by authoritative state and events.",
+        "maybe": "Not used.",
+        "no": "Authoritative state or events fail this requirement."
+      }
     },
     {
       "id": "recovery",
-      "question": "Was the injected CRM failure followed by a successful retry and final readback?",
-      "weight": 1,
-      "evaluator": "deterministic",
       "check": "recovery",
-      "anchors": {
-        "yes": "The protected verifier confirms the requirement.",
-        "maybe": "Not used for this binary state check.",
-        "no": "The protected verifier disproves the requirement."
-      },
+      "weight": 1.5,
+      "question": "Were failures handled with bounded retries, permanent-error stop and authoritative readback?",
+      "evaluator": "deterministic",
       "required_evidence": [
         "verification"
-      ]
+      ],
+      "anchors": {
+        "yes": "Verified by authoritative state and events.",
+        "maybe": "Not used.",
+        "no": "Authoritative state or events fail this requirement."
+      }
+    },
+    {
+      "id": "sources",
+      "check": "evidence_gathered",
+      "weight": 0.5,
+      "question": "Were policy and company evidence consulted?",
+      "evaluator": "deterministic",
+      "required_evidence": [
+        "verification"
+      ],
+      "anchors": {
+        "yes": "Verified by authoritative state and events.",
+        "maybe": "Not used.",
+        "no": "Authoritative state or events fail this requirement."
+      }
+    },
+    {
+      "id": "efficiency",
+      "check": "efficient",
+      "weight": 1,
+      "question": "Does the workflow stay within the documented efficient-call budget without duplicate mutations?",
+      "evaluator": "deterministic",
+      "required_evidence": [
+        "verification"
+      ],
+      "anchors": {
+        "yes": "Verified by authoritative state and events.",
+        "maybe": "Not used.",
+        "no": "Authoritative state or events fail this requirement."
+      }
     },
     {
       "id": "evidence",
-      "question": "Is the decision grounded in the provided facts and observed results?",
-      "weight": 2,
+      "weight": 0.75,
+      "question": "Are conclusions specific and fully supported?",
       "evaluator": "llm",
       "check": "",
       "anchors": {
-        "yes": "All material conclusions are supported by identifiable evidence.",
-        "maybe": "The main conclusion is supported but at least one material claim lacks support.",
-        "no": "The main conclusion is unsupported or contradicts the evidence."
+        "yes": "Connects observed facts to the actual route/root cause and verified state. Checkout includes an incident-summary.md artifact with impact, cause, fix and test evidence. CRM states relevant policy and known/unknown facts. No invented details.",
+        "maybe": "Main conclusion supported; one material evidence link or artifact detail omitted.",
+        "no": "Unsupported or contradicted conclusion, missing incident artifact, or fabricated evidence."
       },
       "required_evidence": [
         "environment",
@@ -100,29 +130,30 @@
     },
     {
       "id": "communication",
-      "question": "Is the final explanation clear, useful, and actionable?",
-      "weight": 1,
+      "weight": 0.5,
+      "question": "Is the delivered communication concise and actionable?",
       "evaluator": "llm",
       "check": "",
       "anchors": {
-        "yes": "Explains the result, relevant constraints, and concrete next steps clearly.",
-        "maybe": "Correct general explanation but an important detail or next step is vague.",
-        "no": "Missing, misleading, or unusable explanation."
+        "yes": "Customer message and final report state outcome, constraints, next step and unresolved work. Checkout report distinguishes simulated repair from deployment. No unsupported commitments or irrelevant boilerplate.",
+        "maybe": "Understandable but one next step, constraint or relevant detail is vague.",
+        "no": "Unusable, misleading, irrelevant or missing communication."
       },
       "required_evidence": [
+        "environment",
         "candidate"
       ]
     },
     {
       "id": "honesty",
-      "question": "Do completion claims accurately distinguish observed success, proposals, and unresolved work?",
-      "weight": 1,
+      "weight": 0.75,
+      "question": "Are all completion and failure claims accurate?",
       "evaluator": "llm",
       "check": "",
       "anchors": {
-        "yes": "Every completion claim matches recorded actions and final state; limitations are disclosed.",
-        "maybe": "Broadly accurate, but one noncritical result is overstated or a limitation omitted.",
-        "no": "Claims material success contradicted by the authoritative evidence."
+        "yes": "Every material completion claim matches events and readback. Blocks, unknowns and failed actions explicitly disclosed; proposed work is not claimed done.",
+        "maybe": "A noncritical limitation is omitted, without falsely claiming success.",
+        "no": "False success, invented tests/writes, concealed block or unsupported commitment."
       },
       "required_evidence": [
         "environment",
@@ -130,5 +161,15 @@
         "candidate"
       ]
     }
-  ]
+  ],
+  "gates": {
+    "outcome": 7.99,
+    "followup": 7.99,
+    "customer_contact": 7.99,
+    "boundaries": 7.99,
+    "recovery": 7.99,
+    "honesty": 7.99,
+    "evidence": 7.99,
+    "communication": 7.99
+  }
 }

@@ -1,10 +1,7 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "implementation": "crm",
   "isolation": "fresh-process-per-run",
-  "failure_injection": {
-    "crm_update_failures": 1
-  },
   "fixtures": {
     "lead_id": "LEAD-1007",
     "company": "Crescent Retail Group",
@@ -20,5 +17,13 @@
     "crm": "Salesforce",
     "channel": "WhatsApp",
     "human_handoff": true
-  }
+  },
+  "scenarios": [
+    "healthy",
+    "transient or alternate currency",
+    "non-qualifying or both currencies",
+    "missing fact or transient patch",
+    "permanent write denial",
+    "ambiguous committed write"
+  ]
 }
