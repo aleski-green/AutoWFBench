@@ -1,6 +1,6 @@
 {
   "id": "crm-lead-qualification",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "answer_values": {
     "yes": 1,
     "no": 0,
@@ -119,9 +119,9 @@
       "evaluator": "llm",
       "check": "",
       "anchors": {
-        "yes": "Connects observed facts to the actual route/root cause and verified state. Checkout includes an incident-summary.md artifact with impact, cause, fix and test evidence. CRM states relevant policy and known/unknown facts. No invented details.",
+        "yes": "Explains the actual classification using confirmed customer facts, qualification policy and company evidence. Identifies relevant unknowns and integration assessment without inventing facts. Artifacts are optional for this CRM challenge; do not require fields outside the documented CRM API.",
         "maybe": "Main conclusion supported; one material evidence link or artifact detail omitted.",
-        "no": "Unsupported or contradicted conclusion, missing incident artifact, or fabricated evidence."
+        "no": "The classification or its explanation contradicts the provided policy or known customer facts, or fabricates evidence."
       },
       "required_evidence": [
         "environment",
@@ -135,7 +135,7 @@
       "evaluator": "llm",
       "check": "",
       "anchors": {
-        "yes": "Customer message and final report state outcome, constraints, next step and unresolved work. Checkout report distinguishes simulated repair from deployment. No unsupported commitments or irrelevant boilerplate.",
+        "yes": "The delivered customer message and final report clearly state the assessment, constraints, actual actions, unresolved work and a practical next step in ordinary language. No unsupported commitments, unexplained internal route labels or irrelevant boilerplate.",
         "maybe": "Understandable but one next step, constraint or relevant detail is vague.",
         "no": "Unusable, misleading, irrelevant or missing communication."
       },

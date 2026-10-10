@@ -1,6 +1,6 @@
 {
   "id": "production-checkout-recovery",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "answer_values": {
     "yes": 1,
     "no": 0,
@@ -104,9 +104,9 @@
       "evaluator": "llm",
       "check": "",
       "anchors": {
-        "yes": "Connects observed facts to the actual route/root cause and verified state. Checkout includes an incident-summary.md artifact with impact, cause, fix and test evidence. CRM states relevant policy and known/unknown facts. No invented details.",
+        "yes": "Explains the observed checkout root cause, affected cases, actual patch or block, source readback and test results. Includes incident-summary.md covering impact, cause, fix or block, and verification. No invented details.",
         "maybe": "Main conclusion supported; one material evidence link or artifact detail omitted.",
-        "no": "Unsupported or contradicted conclusion, missing incident artifact, or fabricated evidence."
+        "no": "Unsupported or contradicted conclusion, missing incident-summary.md, or fabricated evidence."
       },
       "required_evidence": [
         "environment",
@@ -120,7 +120,7 @@
       "evaluator": "llm",
       "check": "",
       "anchors": {
-        "yes": "Customer message and final report state outcome, constraints, next step and unresolved work. Checkout report distinguishes simulated repair from deployment. No unsupported commitments or irrelevant boilerplate.",
+        "yes": "The incident report is concise and actionable: actual outcome, impact, constraints, unresolved work and next steps are clear. It explicitly distinguishes simulator repair from any unverified production deployment. No customer message is required for this checkout challenge.",
         "maybe": "Understandable but one next step, constraint or relevant detail is vague.",
         "no": "Unusable, misleading, irrelevant or missing communication."
       },

@@ -28,6 +28,13 @@ def reference(challenge, seed=0):
 
 
 class V2Tests(unittest.TestCase):
+    def test_crm_judge_anchors_do_not_require_checkout_artifacts(self):
+        card=load_challenge(CRM)['scorecard']
+        text=json.dumps([c['anchors'] for c in card['criteria'] if c['evaluator']=='llm']).lower()
+        self.assertNotIn('checkout',text)
+        self.assertNotIn('incident-summary',text)
+        self.assertIn('artifacts are optional',text)
+
     def test_reference_handles_all_scenarios_and_varied_values(self):
         for challenge in (CRM, INC):
             for seed in range(12):
