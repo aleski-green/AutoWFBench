@@ -1,0 +1,291 @@
+{
+  "name": "Production Checkout Recovery - AutoWFBench v0.1.0",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "checkout-v01",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0afde18c-bbd1-4e65-b42a-a1a4e99d29e1",
+      "name": "Webhook",
+      "webhookId": "397d34f3-319e-4306-b0fb-37d2395feba7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.body.environment.base_url + '/tools' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.body.environment.access_token }}"
+            },
+            {
+              "name": "=Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"operation\": \"incident.read\",\n  \"arguments\": {}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        240,
+        0
+      ],
+      "id": "da8b3d38-a863-42c3-b703-54d590222a53",
+      "name": "Read Incident"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.environment.base_url + '/tools' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Webhook').item.json.body.environment.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"operation\": \"source.read\",\n  \"arguments\": {}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        464,
+        0
+      ],
+      "id": "9142b507-4081-41fb-9ea7-2b9e66ae2646",
+      "name": "Read Source"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5001/run",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"prompt\": `You are diagnosing a production checkout incident.\n\nINCIDENT EVIDENCE:\n${JSON.stringify($('Read Incident').item.json.value, null, 2)}\n\nSOURCE CODE:\n${$('Read Source').item.json.value.content}\n\nAnalyze the incident and identify the smallest correct source-code patch.\n\nReturn ONLY valid JSON in exactly this structure:\n{\n  \"root_cause\": \"brief explanation\",\n  \"old\": \"exact existing source fragment to replace\",\n  \"new\": \"exact replacement source fragment\",\n  \"reasoning_summary\": \"brief explanation of why this patch fixes the incident\"\n}\n\nRequirements:\n- Base your diagnosis only on the supplied incident evidence and source code.\n- Do not modify any files.\n- Do not call tools.\n- The \"old\" value must occur exactly once in the supplied source.\n- Make the smallest necessary patch.\n- Preserve correct USD behavior.\n- Do not include Markdown fences or any text outside the JSON.`,\n  \"mode\": \"read\"\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        688,
+        0
+      ],
+      "id": "1a8b2841-46b9-4b91-aedd-2462aa7c7403",
+      "name": "Investigate Incident"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.environment.base_url + '/tools' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Webhook').item.json.body.environment.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"operation\": \"checkout.patch\",\n  \"arguments\": {\n    \"old\": JSON.parse($('Investigate Incident').item.json.output).old,\n    \"new\": JSON.parse($('Investigate Incident').item.json.output).new\n  }\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        912,
+        0
+      ],
+      "id": "d625cf3c-e91f-4add-857e-789427f86172",
+      "name": "Apply Patch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.environment.base_url + '/tools' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Webhook').item.json.body.environment.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"operation\": \"tests.run\",\n  \"arguments\": {}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1136,
+        0
+      ],
+      "id": "a3577714-6946-425d-ac37-65913d9339ab",
+      "name": "Run Tests"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": " http://127.0.0.1:5001/run",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"prompt\": `Write a concise production incident summary based ONLY on the evidence below.\n\nINCIDENT:\n${JSON.stringify($('Read Incident').item.json.value, null, 2)}\n\nORIGINAL SOURCE:\n${$('Read Source').item.json.value.content}\n\nDIAGNOSIS:\n${$('Investigate Incident').item.json.output}\n\nPATCH RESULT:\n${JSON.stringify($('Apply Patch').item.json, null, 2)}\n\nTEST RESULT:\n${JSON.stringify($('Run Tests').item.json, null, 2)}\n\nReturn ONLY Markdown with these headings:\n\n# Incident Summary\n## Impact\n## Root Cause\n## Resolution\n## Verification\n\nRequirements:\n- Be factual and concise.\n- State what failed.\n- Explain the diagnosed root cause.\n- Describe the actual patch that was applied.\n- Report the test result accurately.\n- Do not invent evidence.\n- Do not include Markdown code fences.`,\n  \"mode\": \"read\"\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1360,
+        0
+      ],
+      "id": "7d4a1c6a-3578-4b78-a02d-07726f442d69",
+      "name": "Generate Incident Summary"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'http://127.0.0.1:9301/runs/' + $('Webhook').item.json.body.execution_id + '/complete' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"submission\": {\n    \"protocol_version\": \"1.0\",\n    \"run_id\": $('Webhook').item.json.body.run_id,\n    \"status\": \"completed\",\n    \"final_answer\": \"The checkout incident was diagnosed, patched, and verified. See incident-summary.md for details.\",\n    \"artifacts\": [\n      {\n        \"name\": \"incident-summary.md\",\n        \"media_type\": \"text/markdown\",\n        \"content\": $('Generate Incident Summary').item.json.output\n      }\n    ],\n    \"trace\": [\n      {\n        \"timestamp\": new Date().toISOString(),\n        \"kind\": \"diagnosis\",\n        \"data\": {\n          \"result\": $('Investigate Incident').item.json.output\n        }\n      },\n      {\n        \"timestamp\": new Date().toISOString(),\n        \"kind\": \"patch\",\n        \"data\": {\n          \"result\": $('Apply Patch').item.json\n        }\n      },\n      {\n        \"timestamp\": new Date().toISOString(),\n        \"kind\": \"tests\",\n        \"data\": {\n          \"result\": $('Run Tests').item.json\n        }\n      }\n    ]\n  }\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1584,
+        0
+      ],
+      "id": "6ff2fac7-7487-41d6-909a-e0922edc5ca4",
+      "name": "Submit Result"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Incident": {
+      "main": [
+        [
+          {
+            "node": "Read Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Source": {
+      "main": [
+        [
+          {
+            "node": "Investigate Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Investigate Incident": {
+      "main": [
+        [
+          {
+            "node": "Apply Patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Patch": {
+      "main": [
+        [
+          {
+            "node": "Run Tests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Tests": {
+      "main": [
+        [
+          {
+            "node": "Generate Incident Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Incident Summary": {
+      "main": [
+        [
+          {
+            "node": "Submit Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7544e716-d0aa-4c76-a95b-e9829264a916",
+  "meta": {
+    "instanceId": "8a0b368957ac22529e8532cee11e18a19e4cbaafce98ca7c8067fad16ab5dbc2"
+  },
+  "nodeGroups": [],
+  "id": "ASfLQxsC7E7ovB86",
+  "tags": []
+}

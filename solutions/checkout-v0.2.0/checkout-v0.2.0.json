@@ -1,0 +1,9 @@
+{
+  "id": "checkout-harishma",
+  "name": "Production Checkout Recovery",
+  "version": "0.2.0",
+  "endpoint": "http://127.0.0.1:9302",
+  "runtime": "n8n-codex",
+  "description": "Evidence-aware checkout recovery with explicit pre-repair and post-repair verification.",
+  "auth_env": ""
+}

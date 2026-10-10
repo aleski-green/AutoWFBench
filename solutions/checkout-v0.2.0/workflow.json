@@ -1,0 +1,333 @@
+{
+  "name": "Production Checkout Recovery - AutoWFBench v0.2.0",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.body.environment.base_url + '/tools' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.body.environment.access_token }}"
+            },
+            {
+              "name": "=Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"operation\": \"incident.read\",\n  \"arguments\": {}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        240,
+        0
+      ],
+      "id": "8d0cfd14-086b-40c4-9b0b-814b250b0958",
+      "name": "Read Incident"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.environment.base_url + '/tools' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Webhook').item.json.body.environment.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"operation\": \"source.read\",\n  \"arguments\": {}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        464,
+        0
+      ],
+      "id": "6aa0c574-9a5e-4f90-907b-ba206b948e0c",
+      "name": "Read Source"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5001/run",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"prompt\": `You are diagnosing a production checkout incident.\n\nINCIDENT EVIDENCE:\n${JSON.stringify($('Read Incident').item.json.value, null, 2)}\n\nSOURCE CODE:\n${$('Read Source').item.json.value.content}\n\nAnalyze the incident and identify the smallest correct source-code patch.\n\nReturn ONLY valid JSON in exactly this structure:\n{\n  \"root_cause\": \"brief explanation\",\n  \"old\": \"exact existing source fragment to replace\",\n  \"new\": \"exact replacement source fragment\",\n  \"reasoning_summary\": \"brief explanation of why this patch fixes the incident\"\n}\n\nRequirements:\n- Base your diagnosis only on the supplied incident evidence and source code.\n- Do not modify any files.\n- Do not call tools.\n- The \"old\" value must occur exactly once in the supplied source.\n- Make the smallest necessary patch.\n- Preserve correct USD behavior.\n- Do not include Markdown fences or any text outside the JSON.`,\n  \"mode\": \"read\"\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        912,
+        0
+      ],
+      "id": "49564e39-e134-4aa4-ad05-c8c95ada15e8",
+      "name": "Investigate Incident"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.environment.base_url + '/tools' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Webhook').item.json.body.environment.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"operation\": \"checkout.patch\",\n  \"arguments\": {\n    \"old\": JSON.parse($('Investigate Incident').item.json.output).old,\n    \"new\": JSON.parse($('Investigate Incident').item.json.output).new\n  }\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1136,
+        0
+      ],
+      "id": "d4b8614c-130b-4d8e-908e-015bc3cb394a",
+      "name": "Apply Patch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": " http://127.0.0.1:5001/run",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"prompt\": `Write a concise production incident summary based ONLY on the evidence below.\n\nINCIDENT:\n${JSON.stringify($('Read Incident').item.json.value, null, 2)}\n\nORIGINAL SOURCE:\n${$('Read Source').item.json.value.content}\n\nPRE-REPAIR TEST RESULT:\n${JSON.stringify($('Run Tests Before').item.json, null, 2)}\n\nDIAGNOSIS:\n${$('Investigate Incident').item.json.output}\n\nPATCH RESULT:\n${JSON.stringify($('Apply Patch').item.json, null, 2)}\n\nPOST-REPAIR TEST RESULT:\n${JSON.stringify($('Run Tests After').item.json, null, 2)}\n\nReturn ONLY Markdown with these headings:\n\n# Incident Summary\n## Impact\n## Root Cause\n## Resolution\n## Verification\n\nRequirements:\n- Be factual and concise.\n- State what failed before the repair based on the observed pre-repair test result.\n- Explain the diagnosed root cause.\n- Describe the actual patch that was applied.\n- Compare the observed pre-repair and post-repair test results.\n- Only claim successful recovery if the supplied evidence actually shows failure before repair and passing tests after repair.\n- Do not invent evidence.\n- Do not include Markdown code fences.`,\n  \"mode\": \"read\"\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1584,
+        0
+      ],
+      "id": "0dadff65-b1b5-4a5d-b942-e8a0c5ec0c2a",
+      "name": "Generate Incident Summary"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'http://127.0.0.1:9302/runs/' + $('Webhook').item.json.body.execution_id + '/complete' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"submission\": {\n    \"protocol_version\": \"1.0\",\n    \"run_id\": $('Webhook').item.json.body.run_id,\n    \"status\": \"completed\",\n    \"final_answer\": \"The checkout recovery workflow observed the pre-repair state, applied the diagnosed patch, and performed post-repair verification. See incident-summary.md for the evidence and outcome.\",\n    \"artifacts\": [\n      {\n        \"name\": \"incident-summary.md\",\n        \"media_type\": \"text/markdown\",\n        \"content\": $('Generate Incident Summary').item.json.output\n      }\n    ],\n    \"trace\": [\n      {\n        \"timestamp\": new Date().toISOString(),\n        \"kind\": \"pre_repair_tests\",\n        \"data\": {\n          \"result\": $('Run Tests Before').item.json\n        }\n      },\n      {\n        \"timestamp\": new Date().toISOString(),\n        \"kind\": \"diagnosis\",\n        \"data\": {\n          \"result\": $('Investigate Incident').item.json.output\n        }\n      },\n      {\n        \"timestamp\": new Date().toISOString(),\n        \"kind\": \"patch\",\n        \"data\": {\n          \"result\": $('Apply Patch').item.json\n        }\n      },\n      {\n        \"timestamp\": new Date().toISOString(),\n        \"kind\": \"post_repair_tests\",\n        \"data\": {\n          \"result\": $('Run Tests After').item.json\n        }\n      }\n    ]\n  }\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1808,
+        0
+      ],
+      "id": "0031d690-37e4-4ad8-b32d-52d44f8de457",
+      "name": "Submit Result"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.environment.base_url + '/tools' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Webhook').item.json.body.environment.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"operation\": \"tests.run\",\n  \"arguments\": {}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        688,
+        0
+      ],
+      "id": "f330499e-5700-470f-8eec-e668d9808010",
+      "name": "Run Tests Before"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "checkout-v02",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4cc33d51-2403-4a1b-a848-5b4b5fc9841c",
+      "name": "Webhook",
+      "webhookId": "0a7ecfb5-650b-49e8-ba17-714cc1a2c3bd"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.environment.base_url + '/tools' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Webhook').item.json.body.environment.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"operation\": \"tests.run\",\n  \"arguments\": {}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1360,
+        0
+      ],
+      "id": "71589e05-1d14-4661-8953-a4158767b823",
+      "name": "Run Tests After"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Read Incident": {
+      "main": [
+        [
+          {
+            "node": "Read Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Source": {
+      "main": [
+        [
+          {
+            "node": "Run Tests Before",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Investigate Incident": {
+      "main": [
+        [
+          {
+            "node": "Apply Patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Patch": {
+      "main": [
+        [
+          {
+            "node": "Run Tests After",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Incident Summary": {
+      "main": [
+        [
+          {
+            "node": "Submit Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Tests Before": {
+      "main": [
+        [
+          {
+            "node": "Investigate Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Tests After": {
+      "main": [
+        [
+          {
+            "node": "Generate Incident Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1b06fc6d-90a5-45c5-9cd6-513dd3183fb7",
+  "meta": {
+    "instanceId": "8a0b368957ac22529e8532cee11e18a19e4cbaafce98ca7c8067fad16ab5dbc2"
+  },
+  "nodeGroups": [],
+  "id": "skAjXRhcUsQ1CgBf",
+  "tags": []
+}

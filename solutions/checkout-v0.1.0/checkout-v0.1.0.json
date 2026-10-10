@@ -1,0 +1,9 @@
+{
+  "id": "checkout-harishma",
+  "name": "Production Checkout Recovery",
+  "version": "0.1.0",
+  "endpoint": "http://127.0.0.1:9301",
+  "runtime": "n8n-codex",
+  "description": "Baseline autonomous workflow for diagnosing and repairing the production checkout incident.",
+  "auth_env": ""
+}
