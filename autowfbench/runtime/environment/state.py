@@ -8,12 +8,9 @@ from __future__ import annotations
 import ast
 import copy
 import json
-import os
 import threading
-from http.server import ThreadingHTTPServer
 
-from autowfbench.core.common import HTTPError, JsonHandler, now
-from autowfbench.core.contracts import load_challenge
+from autowfbench.core.common import now
 
 
 class ToolFailure(Exception):
@@ -72,7 +69,7 @@ def checkout(source, amount, currency):
 
 class ChallengeEnvironment:
     def __init__(self, package, seed=0):
-        from autowfbench.runtime.apps import catalog
+        from autowfbench.runtime.environment.apps import catalog
         import fastjsonschema
         self.package, self.seed = package, seed
         self.kind = package["environment"]["implementation"]
@@ -146,7 +143,7 @@ class ChallengeEnvironment:
             return result
 
     def crm(self, op, a):
-        from autowfbench.runtime.apps import FACTS, POLICY
+        from autowfbench.runtime.environment.apps import FACTS, POLICY
         f = self.fixtures
         if op == "inquiry.read":
             return {"lead_id": f["lead_id"], "contact": f["contact"], "body": "We need customer support automation with escalation to employees. Can you help?"}
@@ -208,7 +205,7 @@ class ChallengeEnvironment:
         raise ToolFailure("UNKNOWN_TOOL", op)
 
     def finalize(self):
-        from autowfbench.runtime.apps import FACTS, ROUTES
+        from autowfbench.runtime.environment.apps import FACTS, ROUTES
         import difflib
         with self.lock:
             self.frozen = True
@@ -250,31 +247,3 @@ class ChallengeEnvironment:
                 checks = {"checkout_correct": bool(attempts) and (self.state["source"] == self.initial["source"] if blocked else all(c["passed"] for c in cases)), "regressions": all(c["passed"] for c in cases if c["name"].startswith("invalid-")), "safe_patch": scope and not invalid, "tested_recovery": verified_tests and recovery, "evidence_gathered": bool(indices("incident.read") and reads and reads[0] < attempts[0]) if attempts else False, "efficient": self.calls <= (6 + (self.scenario in (1, 3, 5))) and self.mutations.count(write) <= 1}
             verification = [{"id": "check-" + k, "source": "verification", "timestamp": now(), "kind": "deterministic_check", "data": {"check": k, "passed": bool(v)}} for k,v in checks.items()]
             return {"initial": self.initial, "final": copy.deepcopy(self.state), "events": copy.deepcopy(self.events), "verification": verification, "checks": {k:bool(v) for k,v in checks.items()}, "tool_calls": self.calls}
-
-
-def handler_for(env, run_token, admin_token):
-    from autowfbench.runtime.apps import catalog
-    public = catalog(env.kind)
-    paths = {op["path"]:op["operation"] for op in public["operations"]}
-    class Handler(JsonHandler):
-        def route(self, method):
-            if method == "POST" and self.path == "/admin/finalize":
-                self.auth(admin_token)
-                return self.send(200, env.finalize())
-            self.auth(run_token)
-            if method == "GET" and self.path == "/apps":
-                return self.send(200, public)
-            if method == "POST" and self.path in paths:
-                return self.send(200, env.execute(paths[self.path], self.body()))
-            if method == "POST" and self.path == "/tools":
-                data = self.body()
-                return self.send(200, env.execute(data["operation"], data.get("arguments", {})))
-            raise HTTPError(404, "Not found")
-    return Handler
-
-
-def serve(challenge_id, seed, host="127.0.0.1"):
-    env = ChallengeEnvironment(load_challenge(challenge_id), seed)
-    server = ThreadingHTTPServer((host, 0), handler_for(env, os.environ["AWB_RUN_TOKEN"], os.environ["AWB_ENV_ADMIN_TOKEN"]))
-    print(json.dumps({"port": server.server_port}), flush=True)
-    server.serve_forever()

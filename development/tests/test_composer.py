@@ -1,9 +1,9 @@
 import copy
 import unittest
 
-from autowfbench.composer.n8n import validate_workflow
-from autowfbench.composer.graph import compile_graph
-from autowfbench.runtime.apps import catalog
+from autowfbench.interfaces.composer.n8n import validate_workflow
+from autowfbench.interfaces.composer.graph import compile_graph
+from autowfbench.runtime.environment.apps import catalog
 
 
 def workflow():

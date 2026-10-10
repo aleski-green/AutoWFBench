@@ -11,8 +11,8 @@ from autowfbench.core.common import digest
 from autowfbench.core.contracts import load_challenge
 from autowfbench.core.scoring import calculate
 from autowfbench.interfaces.solution import solve
-from autowfbench.runtime.apps import catalog
-from autowfbench.runtime.environment import ChallengeEnvironment
+from autowfbench.runtime.environment.apps import catalog
+from autowfbench.runtime.environment.state import ChallengeEnvironment
 
 CRM = 'crm-lead-qualification'
 INC = 'production-checkout-recovery'
