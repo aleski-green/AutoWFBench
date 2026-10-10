@@ -13,7 +13,8 @@ export N8N_BIN="$PWD/.runtime/node_modules/.bin/n8n"
 python -m autowfbench compose all --data-dir runs/composer
 ```
 
-Generation uses `codex exec --model gpt-6.1-sol`, public tasks/API docs and at most
+Generation uses `codex exec --model gpt-6.1-sol`, public tasks/API docs, read-only
+development observations and at most
 three candidates. Each is tested on development seeds 0, 2, 4. Numeric scores and
 public action traces inform repairs. The best candidate is frozen, then run on
 held-out seeds 6–11 twice. No hold-out feedback enters generation. Each generation,
@@ -54,7 +55,9 @@ languages and source formatting. Checkout interprets a restricted Python AST;
 this is not a full software-repair benchmark or a simulation of every SaaS API.
 
 The engine freezes authoritative events before a separate judge grades them.
-The n8n adapter injects run context only; HTTP nodes perform business actions.
+A typed graph avoids JSON-inside-JSON generation errors. A small compiler supplies
+native node boilerplate; Sol generates all decisions and expressions. The n8n
+adapter injects run context only; HTTP nodes perform business actions.
 Code nodes transform data. Local n8n runs use fresh storage, restricted nodes,
 redacted logs and process-group cancellation. This is not a hostile-code sandbox.
 Use an isolated machine/container for third-party workflows.

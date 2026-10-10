@@ -106,6 +106,7 @@ class V2Tests(unittest.TestCase):
                 self.assertLess(calculate(r,card,j)['score_0_10'],8,criterion['id'])
             run['checks']['efficient']=False
             self.assertEqual(calculate(run,card,response)['score_0_10'],9)
+            self.assertTrue(calculate(run,card,response)['execution_pass'])
 
     def test_empty_attempt_cannot_pass_even_with_all_yes_judge(self):
         for challenge in (CRM,INC):

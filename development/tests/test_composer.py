@@ -2,6 +2,7 @@ import copy
 import unittest
 
 from autowfbench.composer.n8n import validate_workflow
+from autowfbench.composer.graph import compile_graph
 from autowfbench.runtime.apps import catalog
 
 
@@ -14,6 +15,19 @@ def workflow():
 
 
 class ComposerTests(unittest.TestCase):
+    def test_typed_graph_compiles_native_http_and_keeps_code_unchanged(self):
+        code = r"const pattern = /\s+/; return [{json: {message: 'literal code'}}];"
+        g={'name':'typed','nodes':[
+            {'name':'Read','kind':'http','operation':'crm.read','code':'','expression':'={{ {} }}','next':['Submit'],'on_false':[]},
+            {'name':'Submit','kind':'code','operation':'','code':code,'expression':'','next':[],'on_false':[]}]}
+        w=compile_graph(g,catalog('crm'))
+        self.assertEqual(w['nodes'][-1]['parameters']['jsCode'],code)
+        self.assertEqual(w['nodes'][2]['type'],'n8n-nodes-base.httpRequest')
+        self.assertIn('/apps/crm/crm.read',w['nodes'][2]['parameters']['url'])
+        self.assertEqual(w['connections']['Read']['main'][0][0]['node'],'Submit')
+        g['nodes'][0]['operation']='admin.finalize'
+        with self.assertRaises(KeyError):compile_graph(g,catalog('crm'))
+
     def test_empty_duplicate_disconnected_and_invalid_edges_rejected(self):
         candidates=[]
         w=workflow();w['nodes']=[];candidates.append(w)

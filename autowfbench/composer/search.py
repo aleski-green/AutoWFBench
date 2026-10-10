@@ -9,7 +9,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from autowfbench.composer.n8n import ALLOWED, N8nRuntime, validate_workflow
+from autowfbench.composer.n8n import N8nRuntime
+from autowfbench.composer.graph import SCHEMA, compile_graph
 from autowfbench.core.common import ROOT, background_server, digest, http_json, read_json, save_json
 from autowfbench.core.contracts import load_challenge
 from autowfbench.interfaces.solution import handler_for as solution_handler
@@ -17,76 +18,71 @@ from autowfbench.runtime.engine import Engine, EnvironmentProcess
 from autowfbench.runtime.judge import Judge, handler_for as judge_handler
 
 MODEL = "gpt-6.1-sol"
-PROMPT = """Compose an efficient native n8n workflow for the supplied task and public simApp APIs.
-Return only workflow_json, a JSON string containing {name,nodes,connections,settings}.
-Do not use tools, inspect local files or seek evaluator internals. No canned task solution is provided.
-Read runtime facts; never hard-code customers, IDs, amounts, source code or outcomes.
-Treat the documented response fields as authoritative. Access them directly;
-do not build fuzzy key matching, recursive policy parsers or compatibility shims.
-Use the smallest graph and transformations that implement the documented contract.
-Every business action must use an HTTP Request node. Code nodes may transform data only.
-Handle ok:false explicitly: retry only retryable writes with the SAME idempotency key,
-at most three attempts. Ambiguous writes may already have committed. Read back state.
-Permanent errors: do not retry, do not perform dependent writes, report the block honestly.
-Do not claim successful actions before checking their actual result. One failed task does
-not justify inventing a completed submission. Keep work, code and final explanations concise.
+PROMPT = """Compose the smallest reliable native n8n workflow for this task and the public simApp APIs.
+Return a typed graph {name,nodes}; the harness compiles only n8n boilerplate, never business logic.
+Do not call tools or inspect files. The supplied development preview is read-only example data;
+your workflow MUST re-read current data at execution. Never hard-code customer facts, source
+code, IDs, amounts or outcomes. Use documented field names directly; no fuzzy schema parsers.
+Every business action is an HTTP node. Code nodes only transform data, decide and report.
 
-Runtime: n8n 2.42.3. Allowed node types/versions: ALLOWED_NODES.
-Each node has a unique id/name, type n8n-nodes-base.<type>, typeVersion, position:[x,y], parameters.
-Exactly one Manual Trigger -> Set v3.4 named Context -> generated business graph.
-Context parameters are injected by the runner: {run_id,challenge,environment:{base_url,access_token},limits}.
-Use $('Context').first().json for stable context after HTTP responses replace the current item.
-The terminal node MUST be named Submit, emit exactly one item with the submission schema below,
-and execute on all handled success/failure paths. No disconnected nodes, credentials,
-pinData, workflow static state, $env, external services, shell, file access or automatic node retries.
-Set v3.4: parameters {mode:'raw', jsonOutput:'={{ ...object expression... }}', options:{}}.
-Code v2: parameters {mode:'runOnceForAllItems',jsCode:'...return [{json: object}];'}.
-Code can access $input.first().json and $('Earlier Node').first().json; use .isExecuted
-before referencing a node on a branch that might not run. Avoid Merge nodes that wait for
-mutually exclusive branches. A simple linear graph of reads, transforms and conditional
-writes is preferable to brittle expressions. Use native If nodes for conditional calls.
-If v2.2 boolean condition example: {conditions:{options:{caseSensitive:true,leftValue:'',
-typeValidation:'strict',version:2},conditions:[{id:'check',leftValue:'={{ $json.ready }}',
-rightValue:true,operator:{type:'boolean',operation:'true',singleValue:true}}],combinator:'and'},options:{}}.
-HTTP v4.2 parameters: {method:'POST',url:EXACT_URL,sendHeaders:true,
-headerParameters:{parameters:[{name:'Authorization',value:EXACT_AUTH}]},sendBody:true,
-specifyBody:'json',jsonBody:'={{ ...argument object... }}',options:{}}.
-EXACT_URL must be the exact expression ={{ $('Context').first().json.environment.base_url + '/apps/APP/OPERATION' }}
-using a documented path. EXACT_AUTH is ={{ 'Bearer ' + $('Context').first().json.environment.access_token }}
-Business errors use HTTP200: inspect $json.ok and $json.error.retryable. Success data is $json.value.
-A response value can be an array; preserve the enclosing {ok,value} object.
-connections shape: {sourceName:{main:[[{node:targetName,type:'main',index:0}]]}}.
-If nodes use main[0] for true and main[1] for false. Branches converge directly into
-the next node, not a Merge that waits on both. Use bounded explicit retry branches.
+Each node has name, kind (http/code/if), operation, code, expression, next, on_false.
+Unused string fields are empty strings and unused edge lists are []. All fields are required.
+The compiler supplies Start -> Context -> your first node. Context contains
+{run_id,challenge,environment:{base_url,access_token},limits}. Do not define Start or Context.
+Connections use node names: next is the single successor (true branch for If), on_false
+is the false successor for If only. Multiple paths can converge directly into a node.
+Every handled path must reach a terminal Code node named Submit, with next:[],on_false:[].
+
+HTTP: operation is one documented operation. expression is an n8n object expression,
+e.g. ={{ {} }} for no arguments, or ={{ {changes:$('Assess').first().json.changes,
+idempotency_key:$('Context').first().json.run_id+':update'} }}. Headers and URL are supplied
+by the compiler. A response replaces the current item and has {ok:true,value} or
+{ok:false,error:{code,message,retryable}}; value can itself be an array.
+Code: code is JavaScript returning [{json: object}]. Access current data with
+$input.first().json and prior outputs with $('Node Name').first().json. Check
+$('Node Name').isExecuted before referencing a node on a branch that may not run.
+If: expression must evaluate to a boolean, e.g. ={{ $json.ok === true }}.
+No shell, filesystem, imports, require, $env, external services, static state or credentials.
+
+Inspect every action result. Retry only retryable errors, at most three total attempts,
+using the SAME idempotency key and arguments. Ambiguous writes may already have committed.
+Read back and compare state before dependent actions or success claims. Permanent failures:
+stop dependent writes, verify unchanged state, report the block honestly and perform any
+independent communication the task requires. When verification tests are available, run them before the write attempt and again after
+the attempt sequence, including a blocked sequence. Explain
+business next steps in plain language, never internal status codes alone. No invented success.
+Optimize calls and transformation code. Use the actual public policy and observed test/source
+results for decisions; do not add speculative compatibility rules. Output the full graph.
 
 PUBLIC_INPUT:
 """
 
 
 def public_input(challenge_id):
-    # Acquire the same catalog a solution can discover; no fixture state or scorecard.
+    # Acquire public docs and read-only development observations; never grader internals.
     process = EnvironmentProcess(challenge_id, 0)
     try:
         apps = http_json(process.public_url + "/apps", token=process.run_token)
+        preview = [{"operation":op["operation"], "result":http_json(process.public_url+op["path"], {}, process.run_token)} for op in apps["operations"] if op["operation"].endswith(".read")]
     finally:
         process.close()
-    return {"challenge": load_challenge(challenge_id)["definition"], "apps": apps, "submission_schema": read_json(ROOT / "benchmark/schemas/submission.schema.json")}
+    return {"challenge": load_challenge(challenge_id)["definition"], "apps": apps, "development_preview":preview, "submission_schema": read_json(ROOT / "benchmark/schemas/submission.schema.json")}
 
 
 def generate(public, directory, previous=None, feedback=None):
     directory.mkdir(parents=True, exist_ok=True)
-    prompt = PROMPT.replace("ALLOWED_NODES", json.dumps(ALLOWED)) + json.dumps(public)
+    prompt = PROMPT + json.dumps(public)
     if previous is not None or feedback:
-        prompt += "\nRepair the previous candidate using only these development observations. Return the full workflow.\n" + json.dumps({"previous":previous,"feedback":feedback})
+        prompt += "\nRepair using these development observations. Return the full typed graph, not raw n8n JSON.\n" + json.dumps({"previous_native_workflow":previous,"feedback":feedback})
     prompt_path = directory / "prompt.txt"
     if (directory / "response.json").exists():
         if prompt_path.read_text() != prompt:
             raise ValueError("Existing generation used a different prompt; use a fresh output directory")
-        workflow = json.loads(read_json(directory / "response.json")["workflow_json"])
+        workflow = compile_graph(read_json(directory / "response.json"), public["apps"])
         save_json(directory / "workflow.json", workflow)
-        return validate_workflow(workflow, public["apps"])
+        return workflow
     prompt_path.write_text(prompt)
-    schema = {"type":"object", "properties":{"workflow_json":{"type":"string"}}, "required":["workflow_json"], "additionalProperties":False}
+    schema = SCHEMA
     save_json(directory / "schema.json", schema)
     binary = os.environ.get("CODEX_BIN") or shutil.which("codex")
     if not binary:
@@ -99,9 +95,9 @@ def generate(public, directory, previous=None, feedback=None):
     save_json(directory / "provenance.json", {"model":MODEL,"prompt_digest":digest(prompt),"seconds":round(time.monotonic()-started,3),"returncode":proc.returncode})
     if proc.returncode:
         raise RuntimeError("codex exec failed; see " + str(directory / "stderr.log"))
-    workflow = json.loads(read_json(directory / "response.json")["workflow_json"])
+    workflow = compile_graph(read_json(directory / "response.json"), public["apps"])
     save_json(directory / "workflow.json", workflow)
-    return validate_workflow(workflow, public["apps"])
+    return workflow
 
 
 def evaluate(workflow, challenge_id, seeds, directory, runtime, judge_model=MODEL, repeats=1):
@@ -161,7 +157,7 @@ def compose(challenge_id, directory, attempts=3, target=9):
             if score is not None and score >= target:
                 break
         except (ValueError, KeyError) as exc:
-            feedback = {"validation_error":str(exc)}
+            feedback = {"validation_error":str(exc), "raw_candidate":read_json(root / "response.json") if (root / "response.json").exists() else None, "prior_observations":feedback}
             save_json(root / "validation-error.json", feedback)
             if (root / "workflow.json").exists():
                 previous = read_json(root / "workflow.json")

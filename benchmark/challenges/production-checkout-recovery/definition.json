@@ -13,5 +13,5 @@
     "checkout.patch",
     "tests.run"
   ],
-  "completion": "Submit incident-summary.md and an accurate final answer. This fixture is a constrained checkout simulator, not an unrestricted Python execution environment. Handle missing facts and non-qualifying leads where applicable. For permanent write errors, preserve state and explain the block. Reuse idempotency keys after ambiguous writes; bound retries. Read back writes before claiming success. Optimize calls without skipping evidence."
+  "completion": "Submit incident-summary.md and an accurate final answer. This fixture is a constrained checkout simulator, not an unrestricted Python execution environment. Handle missing facts and non-qualifying leads where applicable. For permanent write errors, preserve state and explain the block. Reuse idempotency keys after ambiguous writes; bound retries. Read back writes before claiming success. Optimize calls without skipping evidence. Run public tests before a repair attempt and again after the attempt sequence, even if write access was denied, to confirm whether the incident remains."
 }
