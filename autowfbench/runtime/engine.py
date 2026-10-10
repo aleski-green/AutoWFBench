@@ -208,7 +208,7 @@ class Engine:
         if self.judge_url:
             self.update(run_id, status="judging", score_0_10=None)
             try:
-                reply = http_json(self.judge_url.rstrip("/") + "/evaluate", {"definition": package["definition"], "scorecard": package["scorecard"], "run_log": run}, self.judge_token, timeout=200)
+                reply = http_json(self.judge_url.rstrip("/") + "/evaluate", {"definition": package["definition"], "scorecard": package["scorecard"], "run_log": run}, self.judge_token, timeout=350)
                 provenance = reply["provenance"]
                 if provenance["run_log_digest"] != digest(run) or provenance["response_digest"] != digest(reply["judgement"]) or provenance["mode"] not in ("codex", "demo"):
                     raise ValueError("Judge provenance mismatch")

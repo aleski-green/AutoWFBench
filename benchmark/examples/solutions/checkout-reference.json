@@ -2,7 +2,7 @@
   "id": "checkout-reference",
   "name": "Checkout Reference",
   "version": "1.0.0",
-  "endpoint": "http://127.0.0.1:9202",
+  "endpoint": "http://127.0.0.1:9201",
   "runtime": "scripted-reference",
   "description": "A deterministic protocol example, not an autonomous workflow performance claim.",
   "auth_env": ""

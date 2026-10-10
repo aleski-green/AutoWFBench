@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autowfbench"
-version = "0.1.0"
+version = "0.2.0"
 description = "Evidence-driven benchmarks for replaceable automation workflows"
 requires-python = ">=3.11"
 dependencies = ["fastjsonschema>=2.21,<3"]
@@ -15,5 +15,3 @@ autowfbench = "autowfbench.interfaces.cli:main"
 [tool.setuptools.packages.find]
 include = ["autowfbench*"]
 
-[tool.setuptools.package-data]
-autowfbench = ["interfaces/web/*.html", "interfaces/web/*.css", "interfaces/web/*.js"]

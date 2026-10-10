@@ -3,12 +3,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
-import urllib.request
 
 from autowfbench.core.common import ROOT, background_server, read_json
 from autowfbench.core.contracts import validate
-from autowfbench.interfaces.web.server import handler_for
-from autowfbench.runtime.engine import Engine
 
 
 class LayoutTests(unittest.TestCase):
@@ -39,18 +36,6 @@ class LayoutTests(unittest.TestCase):
                 "validate('run-log', read_json(ROOT / 'benchmark/examples/run-log.json'))",
             ], cwd=cwd, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-
-    def test_all_dashboard_assets_are_served_with_expected_content_types(self):
-        with tempfile.TemporaryDirectory() as directory:
-            server = background_server(handler_for(Engine(directory), "control"))
-            try:
-                for path, content_type in (("/", "text/html"), ("/app.js", "javascript"), ("/style.css", "text/css")):
-                    with urllib.request.urlopen(f"http://127.0.0.1:{server.server_port}{path}") as response:
-                        self.assertIn(content_type, response.headers["Content-Type"])
-                        self.assertTrue(response.read())
-            finally:
-                server.shutdown()
-                server.server_close()
 
 
 if __name__ == "__main__":

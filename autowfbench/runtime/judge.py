@@ -61,7 +61,7 @@ class Judge:
             binary = os.environ.get("CODEX_BIN") or shutil.which("codex")
             if not binary:
                 raise ValueError("Codex CLI not found")
-            command = [binary, "exec", "--model", self.model, "--sandbox", "read-only", "--skip-git-repo-check", "--ephemeral", "--output-schema", str(schema), "--json", "-o", str(attempt / "judge-result.json"), "-"]
+            command = [binary, "exec", "--ignore-user-config", "--model", self.model, "--sandbox", "read-only", "--skip-git-repo-check", "--ephemeral", "-c", "features.shell_tool=false", "-c", "features.unified_exec=false", "-c", "features.multi_agent=false", "-c", 'web_search="disabled"', "--output-schema", str(schema), "--json", "-o", str(attempt / "judge-result.json"), "-"]
             # Explicitly keep benchmark credentials out of the child process.
             env = {k:v for k,v in os.environ.items() if not k.startswith("AWB_")}
             with (attempt / "judge-events.jsonl").open("w") as stdout, (attempt / "judge-stderr.log").open("w") as stderr:

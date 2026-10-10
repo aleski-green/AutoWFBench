@@ -17,37 +17,47 @@ def solve(request, variant="reference", cancelled=None):
         result = http_json(env["base_url"] + "/tools", {"operation": operation, "arguments": arguments}, env["access_token"])
         trace.append({"timestamp": now(), "kind": "tool_observation", "data": {"operation": operation, "ok": result["ok"]}})
         return result
+    def write(operation, **arguments):
+        arguments["idempotency_key"] = request["run_id"] + operation
+        for _ in range(3):
+            result = tool(operation, **arguments)
+            if result["ok"] or not result["error"]["retryable"] or variant == "incomplete":
+                return result
+        return result
     artifacts = []
     if request["challenge"]["id"] == "crm-lead-qualification":
         inquiry = tool("inquiry.read")["value"]
-        tool("documents.read"); tool("research.read")
-        facts = tool("customer.ask", questions=["What budget, timeline, monthly message volume, languages, CRM, and handoff requirements should we plan for?"])["value"]
-        changes = {**facts, "status": "Qualified", "next_action": "discovery_call", "owner": "sales_coordinator"}
-        update = tool("crm.update", changes=changes)
+        policy = tool("documents.read")["value"]
+        tool("research.read")
+        facts = tool("customer.ask", questions=["Please confirm budget in AED, timeline in weeks, monthly volume, languages, CRM, channel and human handoff requirements."])["value"]
+        route = "needs_review" if any(v is None for v in facts.values()) else "not_qualified" if facts["budget_aed"] < policy["qualification"]["minimum_budget_aed"] or facts["timeline_weeks"] > policy["qualification"]["maximum_timeline_weeks"] else "qualified"
+        changes = {**facts, **policy["routes"][route]}
+        update = write("crm.update", changes=changes)
+        lead = tool("crm.read")["value"]
+        confirmed = all(lead.get(k) == v for k,v in changes.items())
         if variant != "incomplete":
-            if not update["ok"] and update["error"]["retryable"]:
-                tool("crm.update", changes=changes)
-            tool("followup.create", lead_id=inquiry["lead_id"], type="discovery_call", status="pending_scheduling")
-            tool("customer.send", recipient=inquiry["contact"], body="Your WhatsApp use case, Arabic and English support, and human escalation needs align with our services. Salesforce integration requires assessment. Please share availability for a discovery call to confirm scope, pricing, and timeline before commitments.")
-            lead = tool("crm.read")["value"]
-            answer = f"The customer confirmed budget AED {facts['budget_aed']}, {facts['volume']} monthly messages, and a {facts['timeline_weeks']}-week target. Consulted service and qualification policy and company research. Retried the temporary CRM failure; final readback confirms {lead['status']}. Created one discovery follow-up pending scheduling and sent a response without guaranteeing scope, pricing, or delivery. Scheduling remains open."
-        else:
-            answer = "Customer requirements gathered. The CRM update failed; qualification and follow-up are incomplete."
+            if confirmed:
+                write("followup.create", lead_id=inquiry["lead_id"], type=policy["followup"][route], status=policy["followup"]["status"])
+                tool("followup.read")
+            body = f"Assessment: {route}. " + ("Recorded in CRM; the next step is " + changes["next_action"] if confirmed else "CRM write is blocked; staff must restore access before recording the assessment or creating a follow-up.") + ". Integration, scope, price and timing require assessment; no commitments are made."
+            write("customer.send", recipient=inquiry["contact"], body=body)
+        answer = f"Customer facts: {facts}. Policy and company evidence consulted. Assessment: {route}. CRM readback: {lead}. Update result: {update}. " + ("Follow-up verified; scheduling or clarification remains open." if confirmed and variant != "incomplete" else "Work is incomplete; no follow-up claimed.")
     else:
-        tool("incident.read")
-        tool("source.read")
+        incident = tool("incident.read")["value"]
+        source = tool("source.read")["value"]
         before = tool("tests.run")["value"]
         if variant != "incomplete":
-            tool("checkout.patch", old="charge_card(currency, amount)", new="charge_card(amount, currency)")
+            result = write("checkout.patch", old="charge_card(currency, amount)", new="charge_card(amount, currency)")
+            readback = tool("source.read")["value"]
             after = tool("tests.run")["value"]
-            answer = f"The EUR branch passed currency before amount to charge_card, matching the deployment change and failed EUR order. Reversed those arguments only. Tests failed before the patch ({before['passed']}) and passed afterward ({after['passed']}); USD behavior and invalid-payment rejection remain intact. This is a simulated checkout repair, not a production deployment."
+            answer = f"Incident: {incident}. Source passes currency before amount to charge_card. Changed that call only. Write result: {result}. Source readback: {readback}. Public tests before: {before}; after: {after}. " + ("Repair verified in the simulator; production deployment and monitoring remain open." if after["passed"] else "Write blocked and incident unresolved; restore write access, then retry and verify. No production deployment occurred.")
         else:
-            answer = "EUR checkout fails because charge_card receives swapped arguments. The source has not been changed; the incident remains unresolved."
-        artifacts = [{"name": "incident-summary.md", "media_type": "text/markdown", "content": "# Incident summary\n\n" + answer}]
+            answer = "Checkout still fails. No patch applied; repair remains open."
+        artifacts = [{"name": "incident-summary.md", "media_type": "text/markdown", "content": answer}]
     return {"protocol_version": "1.0", "run_id": request["run_id"], "status": "completed", "final_answer": answer, "artifacts": artifacts, "trace": trace}
 
 
-def handler_for(variant="reference"):
+def handler_for(variant="reference", executor=None):
     jobs, lock = {}, threading.RLock()
     class Handler(JsonHandler):
         def route(self, method):
@@ -59,7 +69,7 @@ def handler_for(variant="reference"):
                     jobs[execution_id] = {"status": "running", "cancel": cancel}
                 def work():
                     try:
-                        result = solve(request, variant, cancel)
+                        result = executor(request, cancel) if executor else solve(request, variant, cancel)
                     except Exception as exc:
                         result = {"protocol_version": "1.0", "run_id": request["run_id"], "status": "failed", "final_answer": str(exc), "artifacts": [], "trace": []}
                     with lock:

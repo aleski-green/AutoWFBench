@@ -1,0 +1,262 @@
+{
+  "benchmark": "AutoWFBench v2",
+  "code_commit": "47951ccb9434ae7d4b3f372f2b1a7e71fd32c868",
+  "generator_model": "gpt-6.1-sol",
+  "judge_model": "gpt-6.1-sol (separate sessions)",
+  "runtime": "n8n 2.42.3",
+  "unit_tests_passed": 30,
+  "selection": "Unedited outputs of the same typed-graph composer; no held-out feedback was sent to generation. Evaluation restarted after correcting challenge-specific semantic anchors.",
+  "score_rule": "Worst score over six held-out seeds, each repeated twice. Missing judges keep the suite unscored.",
+  "challenges": [
+    {
+      "id": "crm-lead-qualification",
+      "scorecard_version": "2.0.1",
+      "package_hashes": {
+        "definition": "5396fec20b711a6c1cf00e6b2c7d9c1f587ca8eb0209e09a9597eb0f7fb0baba",
+        "environment": "2b28778ad4103f6e992b9d36af8752ba879b5d443522105a52d5c686b8c201d7",
+        "scorecard": "a950e6bb13ae49a8b331aba8ebc258cb93299db082bbd3ab68d653dc0e6e7225"
+      },
+      "workflow_digest": "b606110b7db6bccd0b5543c871dee2541a04ffcaa051da0379034aa7c378a584",
+      "nodes": 23,
+      "worst_score": 8.5,
+      "mean_score": 8.64,
+      "mean_seconds_including_cold_runtime": 35.33,
+      "all_core_checks_pass": true,
+      "runs": [
+        {
+          "seed": 6,
+          "repeat": 0,
+          "score": 8.5,
+          "tool_calls": 11,
+          "seconds_including_cold_runtime": 46.1214,
+          "core_execution_checks_pass": true,
+          "run_id": "run-1e1041e5095f433a8b46729839613068"
+        },
+        {
+          "seed": 6,
+          "repeat": 1,
+          "score": 8.5,
+          "tool_calls": 11,
+          "seconds_including_cold_runtime": 46.3761,
+          "core_execution_checks_pass": true,
+          "run_id": "run-9f19c4c07e0f4569b10d3ba1c10184f8"
+        },
+        {
+          "seed": 7,
+          "repeat": 0,
+          "score": 8.5,
+          "tool_calls": 12,
+          "seconds_including_cold_runtime": 40.4331,
+          "core_execution_checks_pass": true,
+          "run_id": "run-03747ba8e7ef440c877e95483be9ab5e"
+        },
+        {
+          "seed": 7,
+          "repeat": 1,
+          "score": 8.5,
+          "tool_calls": 12,
+          "seconds_including_cold_runtime": 40.0253,
+          "core_execution_checks_pass": true,
+          "run_id": "run-bf66bb855d834f388a1d1fe17d0ae44e"
+        },
+        {
+          "seed": 8,
+          "repeat": 0,
+          "score": 9.0,
+          "tool_calls": 11,
+          "seconds_including_cold_runtime": 38.9966,
+          "core_execution_checks_pass": true,
+          "run_id": "run-8b9cfaccbae74acbb3627163128f57c2"
+        },
+        {
+          "seed": 8,
+          "repeat": 1,
+          "score": 8.67,
+          "tool_calls": 11,
+          "seconds_including_cold_runtime": 40.8609,
+          "core_execution_checks_pass": true,
+          "run_id": "run-39d16fb6b7884682995d83fab1cf1031"
+        },
+        {
+          "seed": 9,
+          "repeat": 0,
+          "score": 9.0,
+          "tool_calls": 12,
+          "seconds_including_cold_runtime": 24.647,
+          "core_execution_checks_pass": true,
+          "run_id": "run-c1a2e4f7aa644275b0a9150f029007b7"
+        },
+        {
+          "seed": 9,
+          "repeat": 1,
+          "score": 9.0,
+          "tool_calls": 12,
+          "seconds_including_cold_runtime": 39.6457,
+          "core_execution_checks_pass": true,
+          "run_id": "run-e957e4291eb345a4a56491ebfab1a089"
+        },
+        {
+          "seed": 10,
+          "repeat": 0,
+          "score": 8.5,
+          "tool_calls": 9,
+          "seconds_including_cold_runtime": 21.592,
+          "core_execution_checks_pass": true,
+          "run_id": "run-b43a3052999d4268b205a8f643d8e72e"
+        },
+        {
+          "seed": 10,
+          "repeat": 1,
+          "score": 8.5,
+          "tool_calls": 9,
+          "seconds_including_cold_runtime": 30.566,
+          "core_execution_checks_pass": true,
+          "run_id": "run-ceceba0a53c44d3ca83567d73a628b88"
+        },
+        {
+          "seed": 11,
+          "repeat": 0,
+          "score": 8.5,
+          "tool_calls": 12,
+          "seconds_including_cold_runtime": 32.8298,
+          "core_execution_checks_pass": true,
+          "run_id": "run-dc50f415142b4ee7b5607d859c205a3e"
+        },
+        {
+          "seed": 11,
+          "repeat": 1,
+          "score": 8.5,
+          "tool_calls": 12,
+          "seconds_including_cold_runtime": 21.8586,
+          "core_execution_checks_pass": true,
+          "run_id": "run-081baa1c76804f3d9f4279821ffb3c7b"
+        }
+      ]
+    },
+    {
+      "id": "production-checkout-recovery",
+      "scorecard_version": "2.0.1",
+      "package_hashes": {
+        "definition": "d8e116fdf56dbea478d6c54bb8d52f7cac4c2e3b1ed458978d88a59f20974f17",
+        "environment": "c3b2a997fe3b2cc079383f8732a3c4963013b191d3e1afa59181a58071925b47",
+        "scorecard": "7724a916da6ed67b616109dd59fca21f0fb5189b083863f82340658d8c1e4dda"
+      },
+      "workflow_digest": "fa23848e70795291a31f64f8e539cdb593e4114a968ae607854d78c026e02413",
+      "nodes": 15,
+      "worst_score": 9.67,
+      "mean_score": 9.67,
+      "mean_seconds_including_cold_runtime": 35.46,
+      "all_core_checks_pass": true,
+      "runs": [
+        {
+          "seed": 6,
+          "repeat": 0,
+          "score": 9.67,
+          "tool_calls": 6,
+          "seconds_including_cold_runtime": 49.6145,
+          "core_execution_checks_pass": true,
+          "run_id": "run-a8d78acee8b3419da1309c9550e4cb77"
+        },
+        {
+          "seed": 6,
+          "repeat": 1,
+          "score": 9.67,
+          "tool_calls": 6,
+          "seconds_including_cold_runtime": 49.4309,
+          "core_execution_checks_pass": true,
+          "run_id": "run-32837898f7454b01a188843e0db25625"
+        },
+        {
+          "seed": 7,
+          "repeat": 0,
+          "score": 9.67,
+          "tool_calls": 7,
+          "seconds_including_cold_runtime": 39.7921,
+          "core_execution_checks_pass": true,
+          "run_id": "run-6d0ceba9d28e45f49f35e515d732bacd"
+        },
+        {
+          "seed": 7,
+          "repeat": 1,
+          "score": 9.67,
+          "tool_calls": 7,
+          "seconds_including_cold_runtime": 37.2262,
+          "core_execution_checks_pass": true,
+          "run_id": "run-f07fab7e28d64bedbcc01d3b739b8550"
+        },
+        {
+          "seed": 8,
+          "repeat": 0,
+          "score": 9.67,
+          "tool_calls": 6,
+          "seconds_including_cold_runtime": 38.4181,
+          "core_execution_checks_pass": true,
+          "run_id": "run-1b99d01713a04ca99dead6bd4ea935f5"
+        },
+        {
+          "seed": 8,
+          "repeat": 1,
+          "score": 9.67,
+          "tool_calls": 6,
+          "seconds_including_cold_runtime": 39.3631,
+          "core_execution_checks_pass": true,
+          "run_id": "run-3c3889d152934620a9c8a5cbd1230286"
+        },
+        {
+          "seed": 9,
+          "repeat": 0,
+          "score": 9.67,
+          "tool_calls": 7,
+          "seconds_including_cold_runtime": 36.596,
+          "core_execution_checks_pass": true,
+          "run_id": "run-3a1de43b9fc540329b3d72cf2ad55488"
+        },
+        {
+          "seed": 9,
+          "repeat": 1,
+          "score": 9.67,
+          "tool_calls": 7,
+          "seconds_including_cold_runtime": 37.4574,
+          "core_execution_checks_pass": true,
+          "run_id": "run-5af04f40a0f445a9985356c5bae7ca99"
+        },
+        {
+          "seed": 10,
+          "repeat": 0,
+          "score": 9.67,
+          "tool_calls": 6,
+          "seconds_including_cold_runtime": 22.6487,
+          "core_execution_checks_pass": true,
+          "run_id": "run-8505217789c34407a0da955345d1b91c"
+        },
+        {
+          "seed": 10,
+          "repeat": 1,
+          "score": 9.67,
+          "tool_calls": 6,
+          "seconds_including_cold_runtime": 33.2955,
+          "core_execution_checks_pass": true,
+          "run_id": "run-2f9d1fc3a3eb44c08e0ad7a2b8dbe51d"
+        },
+        {
+          "seed": 11,
+          "repeat": 0,
+          "score": 9.67,
+          "tool_calls": 7,
+          "seconds_including_cold_runtime": 30.0065,
+          "core_execution_checks_pass": true,
+          "run_id": "run-0301f6656e4b4c21a8a663f382db880f"
+        },
+        {
+          "seed": 11,
+          "repeat": 1,
+          "score": 9.67,
+          "tool_calls": 7,
+          "seconds_including_cold_runtime": 11.7196,
+          "core_execution_checks_pass": true,
+          "run_id": "run-def536459dc1442eb2c1ec63150c5553"
+        }
+      ]
+    }
+  ]
+}

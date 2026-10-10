@@ -1,81 +1,8 @@
 {
   "protocol_version": "1.0",
-  "run_id": "run-17cfe42168194bdb9e6001badbc7c210",
+  "run_id": "schema-fixture",
   "status": "completed",
-  "final_answer": "The customer confirmed budget AED 180000, 18000 monthly messages, and a 12-week target. Consulted service and qualification policy and company research. Retried the temporary CRM failure; final readback confirms Qualified. Created one discovery follow-up pending scheduling and sent a response without guaranteeing scope, pricing, or delivery. Scheduling remains open.",
+  "final_answer": "Synthetic protocol fixture; no business actions executed.",
   "artifacts": [],
-  "trace": [
-    {
-      "timestamp": "2026-10-04T19:17:17.456554+00:00",
-      "kind": "tool_observation",
-      "data": {
-        "operation": "inquiry.read",
-        "ok": true
-      }
-    },
-    {
-      "timestamp": "2026-10-04T19:17:17.467400+00:00",
-      "kind": "tool_observation",
-      "data": {
-        "operation": "documents.read",
-        "ok": true
-      }
-    },
-    {
-      "timestamp": "2026-10-04T19:17:17.478068+00:00",
-      "kind": "tool_observation",
-      "data": {
-        "operation": "research.read",
-        "ok": true
-      }
-    },
-    {
-      "timestamp": "2026-10-04T19:17:17.488792+00:00",
-      "kind": "tool_observation",
-      "data": {
-        "operation": "customer.ask",
-        "ok": true
-      }
-    },
-    {
-      "timestamp": "2026-10-04T19:17:17.499259+00:00",
-      "kind": "tool_observation",
-      "data": {
-        "operation": "crm.update",
-        "ok": false
-      }
-    },
-    {
-      "timestamp": "2026-10-04T19:17:17.511401+00:00",
-      "kind": "tool_observation",
-      "data": {
-        "operation": "crm.update",
-        "ok": true
-      }
-    },
-    {
-      "timestamp": "2026-10-04T19:17:17.527235+00:00",
-      "kind": "tool_observation",
-      "data": {
-        "operation": "followup.create",
-        "ok": true
-      }
-    },
-    {
-      "timestamp": "2026-10-04T19:17:17.537562+00:00",
-      "kind": "tool_observation",
-      "data": {
-        "operation": "customer.send",
-        "ok": true
-      }
-    },
-    {
-      "timestamp": "2026-10-04T19:17:17.547853+00:00",
-      "kind": "tool_observation",
-      "data": {
-        "operation": "crm.read",
-        "ok": true
-      }
-    }
-  ]
+  "trace": []
 }
