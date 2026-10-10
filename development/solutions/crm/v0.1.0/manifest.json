@@ -1,0 +1,9 @@
+{
+  "id": "hajer-crm-v01",
+  "name": "Hajer CRM Baseline",
+  "version": "0.1.0",
+  "endpoint": "http://127.0.0.1:9301",
+  "runtime": "python-solution-api",
+  "description": "Baseline CRM Lead Qualification candidate adapted to AutoWFBench Solution API v1.0. Candidate performs business actions only; benchmark owns evidence, verification, judging, and scoring.",
+  "auth_env": ""
+}

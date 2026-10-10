@@ -37,11 +37,34 @@ class EnvironmentProcess:
         env.update(AWB_RUN_TOKEN=self.run_token, AWB_ENV_ADMIN_TOKEN=self.admin_token, PYTHONPATH=str(ROOT))
         self.proc = subprocess.Popen([sys.executable, "-m", "autowfbench", "environment", challenge_id, "--seed", str(seed), "--host", bind_host], env=env, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
-            with selectors.DefaultSelector() as selector:
-                selector.register(self.proc.stdout, selectors.EVENT_READ)
-                if not selector.select(timeout=30):
+            # Windows select()/DefaultSelector only supports sockets, not
+            # anonymous subprocess pipes. Read the environment's one-line
+            # startup handshake on a helper thread so startup remains bounded
+            # and portable across Windows and POSIX.
+            if os.name == "nt":
+                startup = {}
+                ready = threading.Event()
+
+                def read_startup_line():
+                    try:
+                        startup["line"] = self.proc.stdout.readline()
+                    except Exception as exc:
+                        startup["error"] = exc
+                    finally:
+                        ready.set()
+
+                threading.Thread(target=read_startup_line, daemon=True).start()
+                if not ready.wait(timeout=30):
                     raise ValueError("Environment startup timed out")
-                line = self.proc.stdout.readline()
+                if "error" in startup:
+                    raise startup["error"]
+                line = startup.get("line", "")
+            else:
+                with selectors.DefaultSelector() as selector:
+                    selector.register(self.proc.stdout, selectors.EVENT_READ)
+                    if not selector.select(timeout=30):
+                        raise ValueError("Environment startup timed out")
+                    line = self.proc.stdout.readline()
             if not line:
                 raise ValueError("Environment failed to start: " + self.proc.stderr.read(2000))
             port = json.loads(line)["port"]

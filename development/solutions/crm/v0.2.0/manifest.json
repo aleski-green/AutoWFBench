@@ -1,0 +1,9 @@
+{
+  "id": "hajer-crm-v02",
+  "name": "Hajer CRM Efficiency",
+  "version": "0.2.0",
+  "endpoint": "http://127.0.0.1:9302",
+  "runtime": "python-solution-api",
+  "description": "Efficiency iteration of the CRM candidate. Removes nonessential company research while preserving policy grounding, recovery, final-state verification, customer contact, and follow-up behavior.",
+  "auth_env": ""
+}

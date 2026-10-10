@@ -1,0 +1,9 @@
+{
+  "id": "hajer-crm-v03",
+  "name": "Hajer CRM Simplified",
+  "version": "0.3.0",
+  "endpoint": "http://127.0.0.1:9303",
+  "runtime": "python-solution-api",
+  "description": "Simplified CRM candidate built from v0.2. Preserves the eight-call efficient workflow while reducing candidate-side recovery branching and keeping the benchmark-owned evidence and scoring boundary unchanged.",
+  "auth_env": ""
+}
