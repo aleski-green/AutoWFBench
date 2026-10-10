@@ -15,5 +15,3 @@ autowfbench = "autowfbench.interfaces.cli:main"
 [tool.setuptools.packages.find]
 include = ["autowfbench*"]
 
-[tool.setuptools.package-data]
-autowfbench = ["interfaces/web/*.html", "interfaces/web/*.css", "interfaces/web/*.js"]

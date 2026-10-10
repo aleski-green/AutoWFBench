@@ -17,7 +17,6 @@ from autowfbench.runtime.environment import ChallengeEnvironment, ToolFailure, c
 from autowfbench.interfaces.solution import handler_for as solution_handler, solve
 from autowfbench.runtime.judge import Judge, handler_for as judge_handler
 from autowfbench.core.scoring import calculate, validate_judgement
-from autowfbench.interfaces.web.server import handler_for as engine_handler
 
 CRM = "crm-lead-qualification"
 INC = "production-checkout-recovery"
@@ -179,14 +178,6 @@ class BenchmarkTests(unittest.TestCase):
         self.assertEqual(result["termination_reason"], "timeout")
         self.assertFalse(result["execution_pass"])
         self.assertIsNone(result["score_0_10"])
-
-    def test_engine_write_api_requires_token_and_read_ui_works(self):
-        engine = Engine(self.root / "api")
-        url = self.server(engine_handler(engine, "control"))
-        self.assertEqual(http_json(url + "/api/runs"), [])
-        with self.assertRaises(urllib.error.HTTPError) as caught:
-            http_json(url + "/api/runs", {})
-        self.assertEqual(caught.exception.code, 401)
 
     def test_foreign_run_submission_is_rejected_not_attached_to_evidence(self):
         class ForeignResult(JsonHandler):
