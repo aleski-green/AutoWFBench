@@ -1,5 +1,5 @@
 """Compile a small, typed graph into native n8n nodes. No challenge-specific logic."""
-from autowfbench.composer.n8n import validate_workflow
+from autowfbench.interfaces.composer.n8n import validate_workflow
 
 FIELDS = {"name":{"type":"string"}, "kind":{"enum":["http","code","if"]}, "operation":{"type":"string"}, "code":{"type":"string"}, "expression":{"type":"string"}, "next":{"type":"array","maxItems":1,"items":{"type":"string"}}, "on_false":{"type":"array","maxItems":1,"items":{"type":"string"}}}
 SCHEMA = {"type":"object", "properties":{"name":{"type":"string"},"nodes":{"type":"array","minItems":1,"maxItems":50,"items":{"type":"object","properties":FIELDS,"required":list(FIELDS),"additionalProperties":False}}}, "required":["name","nodes"], "additionalProperties":False}

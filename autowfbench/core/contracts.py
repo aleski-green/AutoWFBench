@@ -23,7 +23,8 @@ def load_challenge(challenge_id):
         raise ValueError("Unknown challenge")
     root = ROOT / "benchmark/challenges" / challenge_id
     package = {key: read_json(root / (key + ".json")) for key in ("definition", "environment", "scorecard")}
-    package["environment"]["implementation_digest"] = digest({name: (ROOT / "autowfbench/runtime" / name).read_text() for name in ("environment.py", "apps.py")})
+    environment = ROOT / "autowfbench/runtime/environment"
+    package["environment"]["implementation_digest"] = digest({p.name: p.read_text() for p in sorted(environment.glob("*.py"))})
     validate("scorecard", package["scorecard"])
     definition = package["definition"]
     if definition["id"] != challenge_id:

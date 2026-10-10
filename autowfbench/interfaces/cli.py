@@ -43,8 +43,8 @@ def main():
     p.add_argument("--data-dir", type=Path, default=Path("runs/evaluation"))
     args = parser.parse_args()
     if args.command in ("compose", "evaluate"):
-        from autowfbench.composer.search import compose, evaluate, public_input
-        from autowfbench.composer.n8n import N8nRuntime, validate_workflow
+        from autowfbench.interfaces.composer.search import compose, evaluate, public_input
+        from autowfbench.interfaces.composer.n8n import N8nRuntime, validate_workflow
         challenges = ("crm-lead-qualification", "production-checkout-recovery") if args.challenge_id == "all" else (args.challenge_id,)
         for challenge in challenges:
             directory = args.data_dir.resolve() / challenge
@@ -58,7 +58,7 @@ def main():
             print(json.dumps({"challenge":challenge,"score":summary["score"],"mean":summary["mean"],"summary":str(directory / "held-out/summary.json")}))
         return
     if args.command == "environment":
-        from autowfbench.runtime.environment import serve
+        from autowfbench.runtime.environment.server import serve
         return serve(args.challenge_id, args.seed, args.host)
     if args.command == "judge":
         from autowfbench.runtime.judge import serve

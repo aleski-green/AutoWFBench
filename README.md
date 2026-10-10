@@ -67,3 +67,6 @@ External solution adapters remain supported: `POST /runs` -> `{execution_id}`,
 Run `python -m autowfbench --help` for judge, environment and adapter commands.
 The scripted example adapter is a protocol/test fixture, not a composer result.
 Benchmark edits require an owner-approved version and lock update.
+
+Code follows [rTernarity](CONTRIBUTING.md): core contracts, benchmark runtime and
+interfaces, recursively split by responsibility.

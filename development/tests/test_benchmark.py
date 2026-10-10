@@ -13,7 +13,7 @@ from unittest.mock import patch
 from autowfbench.core.common import JsonHandler, ROOT, background_server, digest, http_json, read_json
 from autowfbench.core.contracts import load_challenge, validate
 from autowfbench.runtime.engine import Engine, EnvironmentProcess
-from autowfbench.runtime.environment import ChallengeEnvironment, ToolFailure, checkout_program
+from autowfbench.runtime.environment.state import ChallengeEnvironment, ToolFailure, checkout_program
 from autowfbench.interfaces.solution import handler_for as solution_handler, solve
 from autowfbench.runtime.judge import Judge, handler_for as judge_handler
 from autowfbench.core.scoring import calculate, validate_judgement

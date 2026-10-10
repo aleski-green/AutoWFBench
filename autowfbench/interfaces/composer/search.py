@@ -9,8 +9,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from autowfbench.composer.n8n import N8nRuntime
-from autowfbench.composer.graph import SCHEMA, compile_graph
+from autowfbench.interfaces.composer.n8n import N8nRuntime
+from autowfbench.interfaces.composer.graph import SCHEMA, compile_graph
 from autowfbench.core.common import ROOT, background_server, digest, http_json, read_json, save_json
 from autowfbench.core.contracts import load_challenge
 from autowfbench.interfaces.solution import handler_for as solution_handler
